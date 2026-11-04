@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tests · Spielunterhaltung</title>
+  <style>
+    body { font-family: system-ui, "Segoe UI", sans-serif; margin: 24px; background: #f6f3ee; color: #2b2f36; }
+    h1 { font-size: 1.3rem; }
+    ol { padding-left: 1.4em; line-height: 1.7; }
+    .ok { color: #2f7a4a; }
+    .fehler { color: #b84a3e; font-weight: 600; }
+    .summe { font-size: 1.1rem; font-weight: 700; }
+  </style>
+  <script src="../version.js"></script>
+</head>
+<body>
+  <h1>Tests</h1>
+  <div id="ziel"></div>
+  <script type="module">
+    import { starte } from './mini-test.js';
+    import './kern/zufall.test.js';
+    import './kern/rueckgaengig.test.js';
+    import './kern/speicher.test.js';
+    import './kern/einstellungen.test.js';
+    import './kern/statistik.test.js';
+    import './kern/eingabe.test.js';
+    import './kern/worker.test.js';
+    import './kern/app.test.js';
+    import './spiele/test-raster.test.js';
+    window.testErgebnis = await starte(document.getElementById('ziel'));
+  </script>
+</body>
+</html>

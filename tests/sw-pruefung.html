@@ -1,0 +1,21 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>SW-Prüfung</title>
+<pre id="aus">läuft …</pre>
+<script>
+  // Prüft in einem echten Browser: Service Worker anmelden, Cache füllen, offline-fähig?
+  (async () => {
+    const aus = document.getElementById('aus');
+    try {
+      const reg = await navigator.serviceWorker.register('../sw.js', { scope: '../' });
+      const sw = reg.installing || reg.waiting || reg.active;
+      if (sw.state !== 'activated') await new Promise((ok) => sw.addEventListener('statechange', () => sw.state === 'activated' && ok()));
+      const namen = await caches.keys();
+      const cache = await caches.open(namen.find((n) => n.startsWith('spielunterhaltung-')));
+      const eintraege = (await cache.keys()).length;
+      aus.textContent = `SW-OK aktiv=${sw.state} caches=${namen.join(',')} eintraege=${eintraege} erwartet=${self.SPIEL_DATEIEN?.length ?? '?'}`;
+    } catch (e) {
+      aus.textContent = 'SW-FEHLER ' + e.message;
+    }
+  })();
+</script>

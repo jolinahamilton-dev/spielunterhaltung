@@ -1,0 +1,22 @@
+.lichter-rahmen { display: grid; gap: var(--a3); justify-items: center; width: min(100%, 72vh, 480px); }
+.lichter {
+  display: grid;
+  grid-template-columns: repeat(var(--n, 4), 1fr);
+  gap: var(--a2);
+  width: 100%;
+  aspect-ratio: 1;
+  touch-action: none;
+  user-select: none;
+}
+.licht {
+  border: 1px solid var(--rand);
+  border-radius: var(--radius);
+  background: var(--flaeche-2);
+  cursor: pointer;
+  transition: background var(--dauer) ease-out, transform var(--dauer) ease-out;
+  padding: 0;
+}
+.licht.an { background: var(--akzent); border-color: var(--akzent); }
+.licht.hinweis { box-shadow: inset 0 0 0 4px var(--fokus); }
+.licht:focus-visible { outline-offset: 3px; }
+.lichter-info { font-variant-numeric: tabular-nums; min-height: 1.45em; }

@@ -1,0 +1,53 @@
+// Alle Spiele mit Kachel-Daten. Module werden erst geladen, wenn das Spiel geöffnet wird.
+// laden: null → „Kommt bald“. entwicklung: true → nur auf localhost oder mit ?dev sichtbar.
+
+import { SPIEL_SYMBOLE } from '../kern/symbole.js';
+
+export const SPIELE = [
+  {
+    id: 'sudoku', name: 'Sudoku', symbol: SPIEL_SYMBOLE.sudoku,
+    beschreibung: 'Ziffern 1–9 in jede Zeile, Spalte und jeden Block.',
+    laden: null,
+  },
+  {
+    id: 'farben-sortieren', name: 'Farben sortieren', symbol: SPIEL_SYMBOLE['farben-sortieren'],
+    beschreibung: 'Farbschichten umgießen, bis jede Röhre einfarbig ist.',
+    laden: null,
+  },
+  {
+    id: 'block-puzzle', name: 'Block-Puzzle', symbol: SPIEL_SYMBOLE['block-puzzle'],
+    beschreibung: 'Formen auf das Feld legen, volle Reihen verschwinden.',
+    laden: null,
+  },
+  {
+    id: 'stau', name: 'Stau auflösen', symbol: SPIEL_SYMBOLE.stau,
+    beschreibung: 'Fahrzeuge verschieben, bis der Weg frei ist.',
+    laden: null,
+  },
+  {
+    id: 'minesweeper', name: 'Minesweeper', symbol: SPIEL_SYMBOLE.minesweeper,
+    beschreibung: 'Minen finden mit Logik – auch auf unendlichem Feld.',
+    laden: null,
+  },
+  {
+    id: 'nonogramm', name: 'Nonogramm', symbol: SPIEL_SYMBOLE.nonogramm,
+    beschreibung: 'Zahlen am Rand verraten, welche Felder ein Bild ergeben.',
+    laden: null,
+  },
+  {
+    id: 'test-raster', name: 'Lichter (Test)', symbol: SPIEL_SYMBOLE.test, entwicklung: true,
+    beschreibung: 'Prüfspiel für das Grundgerüst: alle Felder ausschalten.',
+    laden: () => import('./test-raster/index.js'),
+  },
+];
+
+export function entwicklungsModus(ort = location) {
+  return ort.hostname === 'localhost' || ort.hostname === '127.0.0.1' || new URLSearchParams(ort.search).has('dev');
+}
+
+export function sichtbareSpiele(ort = location) {
+  const dev = entwicklungsModus(ort);
+  return SPIELE.filter((s) => dev || !s.entwicklung);
+}
+
+export const findeSpiel = (id) => SPIELE.find((s) => s.id === id) || null;

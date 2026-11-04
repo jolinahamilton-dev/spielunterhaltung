@@ -1,0 +1,193 @@
+/* App-Shell: Startseite, Kopfleiste, Spielansicht, Bänder */
+.app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* ---------- Startseite ---------- */
+.start-kopf {
+  display: flex;
+  align-items: center;
+  gap: var(--a3);
+  max-width: 1040px;
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--a5) var(--a4) var(--a3);
+}
+.start-titel { font-size: clamp(1.4rem, 1.1rem + 1.2vw, 1.9rem); font-weight: 650; letter-spacing: -.01em; flex: 1; }
+.start-nav { display: flex; gap: var(--a1); }
+
+.start { max-width: 1040px; width: 100%; margin: 0 auto; padding: var(--a2) var(--a4) var(--a6); }
+.kacheln {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: var(--a4);
+}
+.kachel {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  grid-template-rows: auto 1fr auto;
+  column-gap: var(--a4);
+  row-gap: var(--a1);
+  padding: var(--a4) var(--a4) var(--a3);
+  background: var(--flaeche);
+  border: 1px solid var(--rand);
+  border-radius: var(--radius);
+  box-shadow: var(--schatten);
+  text-decoration: none;
+  transition: transform var(--dauer) ease-out, border-color var(--dauer) ease-out;
+}
+a.kachel:hover { border-color: var(--akzent); transform: translateY(-1px); }
+.kachel.offen { border-color: var(--akzent); box-shadow: inset 0 0 0 1px var(--akzent), var(--schatten); }
+.kachel.gesperrt { opacity: .55; box-shadow: none; }
+.kachel-symbol { grid-row: 1 / 4; align-self: start; color: var(--text); }
+.kachel-symbol svg { width: 56px; height: 56px; }
+.kachel-name { font-weight: 650; font-size: 1.08rem; }
+.kachel-text { color: var(--text-leise); font-size: .92rem; }
+.kachel-status {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--a2);
+  font-size: .85rem;
+  color: var(--akzent);
+  font-weight: 600;
+  padding-top: var(--a1);
+}
+.kachel.gesperrt .kachel-status { color: var(--text-leise); }
+.kachel-zahl { color: var(--text-leise); font-weight: 500; }
+
+/* ---------- Kopfleiste ---------- */
+.kopfleiste {
+  display: flex;
+  align-items: center;
+  gap: var(--a2);
+  padding: var(--a2) var(--a3);
+  border-bottom: 1px solid var(--rand);
+  background: var(--hg);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.spiel-titel { flex: 1; font-size: 1.1rem; font-weight: 650; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kopf-knoepfe { display: flex; gap: var(--a1); }
+
+/* ---------- Spielansicht ---------- */
+.spiel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.spielbereich { position: relative; flex: 1; display: flex; min-height: 0; }
+.spielflaeche {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--a4);
+  min-height: 0;
+  touch-action: manipulation;
+}
+
+.band, .update-band {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--a3);
+  padding: var(--a2) var(--a4);
+  background: var(--akzent-sanft);
+  font-size: .95rem;
+}
+.update-band {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--a4) + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  border-radius: var(--radius);
+  box-shadow: var(--schatten);
+  border: 1px solid var(--rand);
+  z-index: 30;
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--a4));
+}
+
+.warten {
+  position: absolute;
+  inset: auto 0 var(--a5) 0;
+  margin: 0 auto;
+  width: max-content;
+  padding: var(--a2) var(--a4);
+  background: var(--flaeche);
+  border: 1px solid var(--rand);
+  border-radius: 999px;
+  color: var(--text-leise);
+  font-size: .9rem;
+}
+
+.gewonnen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--a4);
+  background: color-mix(in srgb, var(--hg) 55%, transparent);
+  animation: einblenden var(--dauer) ease-out;
+  z-index: 4;
+}
+.gewonnen-karte {
+  background: var(--flaeche);
+  border: 1px solid var(--rand);
+  border-radius: var(--radius);
+  box-shadow: var(--schatten);
+  padding: var(--a5) var(--a6);
+  text-align: center;
+  display: grid;
+  gap: var(--a3);
+}
+.gewonnen-titel { font-size: 1.5rem; font-weight: 650; color: var(--erfolg); }
+.gewonnen-text { color: var(--text-leise); }
+.gewonnen-knoepfe { display: flex; gap: var(--a2); justify-content: center; flex-wrap: wrap; }
+
+@keyframes einblenden { from { opacity: 0; } to { opacity: 1; } }
+
+.fehler-text { color: var(--fehler); }
+
+/* ---------- Seiten ---------- */
+.seite { max-width: 640px; width: 100%; margin: 0 auto; padding: var(--a5) var(--a4) var(--a6); display: grid; gap: var(--a4); align-content: start; }
+.seite h2 { margin-top: var(--a3); }
+
+/* ---------- Meldungen ---------- */
+.meldungen {
+  position: fixed;
+  top: calc(var(--a4) + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  gap: var(--a2);
+  z-index: 40;
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--a4));
+  pointer-events: none;
+}
+.meldung {
+  background: var(--text);
+  color: var(--hg);
+  padding: var(--a2) var(--a4);
+  border-radius: var(--radius);
+  box-shadow: var(--schatten);
+  font-size: .92rem;
+  animation: einblenden var(--dauer) ease-out;
+}
+
+/* ---------- Handy ---------- */
+@media (max-width: 560px) {
+  .start-kopf { padding: var(--a4) var(--a4) var(--a2); }
+  .kacheln { gap: var(--a3); }
+  .kachel { grid-template-columns: 44px 1fr; padding: var(--a3); }
+  .kachel-symbol svg { width: 44px; height: 44px; }
+  .kopfleiste { padding: var(--a1) var(--a2); gap: var(--a1); }
+  .spielflaeche { padding: var(--a2); }
+}

@@ -1,0 +1,160 @@
+# Plan – Spielunterhaltung
+
+Stand: 04.11.2026 · Status: **Phase 0 (Grundgerüst) fertig**, Version 0.1.0 · nächster Schritt: Phase 1 Block-Puzzle
+
+Eine eigene, ruhige Spiele-App mit sechs Spielen: **Sudoku, Farben sortieren, Block-Puzzle, Stau auflösen, Minesweeper (mit Unendlich-Modus), Nonogramm**.
+Vor allem für den **PC**, aber auch fürs **Handy** gut spielbar. Läuft **komplett offline**.
+
+Die Details stehen in den Konzepten unter [`konzepte/`](konzepte/):
+
+| Datei | Inhalt |
+|---|---|
+| [00-oberflaeche-und-grundgeruest.md](konzepte/00-oberflaeche-und-grundgeruest.md) | App-Shell, gemeinsame Module, Offline/PWA, Design, Tests, Veröffentlichung |
+| [sudoku.md](konzepte/sudoku.md) | Generator mit eindeutiger Lösung, 4 Stufen, Notizen, erklärende Hinweise |
+| [farben-sortieren.md](konzepte/farben-sortieren.md) | Gießregeln, A*-Löser, garantiert lösbare Level |
+| [block-puzzle.md](konzepte/block-puzzle.md) | 8×8-Feld, Formen-Katalog, Punkte, Modus „Entspannt“ |
+| [stau-aufloesen.md](konzepte/stau-aufloesen.md) | Schiebe-Rätsel, Modi Klassisch und Ausparken, exakte Mindestzugzahl |
+| [minesweeper.md](konzepte/minesweeper.md) | Klassisch und „ohne Raten“, Unendlich-Modus mit Chunks |
+| [nonogramm.md](konzepte/nonogramm.md) | Zeilen-Löser, Zufallsbilder und eigene Motive, Handy-Bedienung bis 20×20 |
+
+---
+
+## 1. Grundsätze (gelten für alle Spiele)
+
+- **Still:** keine Töne, kein Klick-Feedback, keine Vibration. Ein Test prüft, dass `vibrate`/`Audio` nirgends im Code vorkommt.
+- **Offline immer:** alle Dateien liegen im Service-Worker-Cache. Rätsel und Level werden im Browser erzeugt oder liegen als Datei bei, nichts kommt aus dem Netz.
+- **Kein Frust:** keine Werbung, keine Leben, keine Energie, kein Zeitdruck. Rückgängig und automatisches Speichern nach jedem Zug. **Kein Timer**, keine Bestzeiten.
+- **Garantiert lösbar:** Sudoku und Nonogramm haben immer genau eine Lösung, die ohne Raten erreichbar ist. Farben- und Stau-Level sind immer lösbar.
+- **PC zuerst:** jedes Spiel ist vollständig mit Maus *und* nur mit Tastatur spielbar. Am Handy gibt es Touch mit Trefferflächen ≥ 44 px, hoch und quer.
+- **Barrierearm:** Hell-/Dunkelmodus, farbenblind-freundliche Palette, Farben zusätzlich mit Mustern/Symbolen, Animationen abschaltbar.
+- **Eigenes Design**, keine Nachahmung bekannter Markenspiele.
+
+## 2. Technik (Festlegungen)
+
+| Thema | Entscheidung |
+|---|---|
+| Sprache | Vanilla JavaScript (ES-Module), HTML, CSS, **kein Build-Schritt, keine npm-Pakete** (auf dem Rechner gibt es weder Node noch Python) |
+| App-Form | **PWA**: am PC über Edge/Chrome „App installieren“ (eigenes Fenster, Startmenü), am Handy „Zum Startbildschirm“ |
+| Hosting | eigenes Repo `jolinahamilton-dev/spielunterhaltung` (lokaler Ordner heißt noch `kopfaus-spiele`), GitHub Pages direkt aus `main` |
+| Speicher | localStorage mit Versions-Hülle und Migration; IndexedDB nur, falls Minesweeper-Unendlich zu groß wird |
+| Zufall | Seeded RNG (sfc32): gleiches Rätsel neu starten, wiederholbare Tests |
+| Rechenarbeit | Generatoren und Löser im **Web Worker**, dazu ein Vorrat fertiger Rätsel, damit „Neu“ sofort geht |
+| Lokal testen | `werkzeuge/server.ps1` (Windows PowerShell, HttpListener auf localhost:8080) · Offline-Prüfung mit `werkzeuge/offline-pruefung.cjs` (Electron aus dem Anime Tracker als unsichtbarer Chromium – das Claude-Browserfenster kann keine Service Worker, Edge/Chrome sind nicht installiert) |
+| Tests | eigene Test-Seite `tests/index.html` mit kleinem Test-Runner im Browser |
+| Darstellung | DOM/CSS-Grid für Sudoku, Nonogramm und Block-Puzzle · SVG für Farben sortieren und Stau · Canvas für Minesweeper (wegen Unendlich) |
+
+**Beim Abgleich der Konzepte festgelegt** (gilt vor den Einzelkonzepten):
+1. **Ordner = Spiel-ID:** `spiele/sudoku`, `spiele/farben-sortieren`, `spiele/block-puzzle`, `spiele/stau`, `spiele/minesweeper`, `spiele/nonogramm`.
+2. **Jedes Spiel trennt** `logik.js` (ohne DOM, testbar, im Worker nutzbar) von `ansicht.js`. Dazu kommen `index.js` als Schnittstelle und ggf. `generator.worker.js`.
+3. **Grenzen für Generatoren in Rechenschritten, nicht in Zeit.** Sonst ergibt derselbe Seed auf einem langsamen Handy ein anderes Rätsel. Zeitgrenzen sind nur als Notbremse im freien Spiel erlaubt.
+4. **Das erzeugte Rätsel steckt im Spielstand**, nicht nur der Seed. Spätere Änderungen am Generator machen so keine laufenden Spiele kaputt.
+5. **Rückgängig:** unbegrenzt in Sudoku, Nonogramm, Farben und Stau. Bewusste Ausnahmen: im Block-Puzzle „Klassisch“ 3× pro Spiel (unbegrenzt in „Entspannt“) und im Minesweeper nur „Fehlklick zurücknehmen“ im Modus Entspannt. Ein allgemeines Rückgängig würde dort das Spiel aushebeln.
+6. **Minesweeper-Unendlich: Mindestdichte 15 %** statt der im Konzept genannten 10 %. Bei 10 % liegt der Anteil der Null-Felder knapp an der Schwelle, ab der Null-Flächen riesig werden. Bei 15 % bleiben sie sicher klein. Das Budget pro Frame bleibt trotzdem.
+
+## 3. Spiel-Schnittstelle (Kurzfassung)
+
+```js
+// spiele/<id>/index.js
+export default {
+  id, name, beschreibung, symbol?, varianten?: [{ id, name }],
+  standVersion?, migriere?(stand, von),
+  erstelle(container, ctx, gespeicherterStand) → instanz
+}
+// instanz – Pflicht:   getStand(), rueckgaengig(), neustart(), zerstoere()
+//         – optional:  hinweis(), onTaste(e) → bool, wiederholen(), kannRueckgaengig(),
+//                      pausiere(), fortsetze(), neu(variante), zusammenfassung()
+// ctx: speicher, einstellungen, statistik.melde(), zufall(seed), farben, eingabe,
+//      worker(pfad), meldeAenderung(), meldeGewonnen(), variante, signal
+```
+Ausführlich in [00-oberflaeche-und-grundgeruest.md §4](konzepte/00-oberflaeche-und-grundgeruest.md).
+
+## 4. Die Spiele auf einen Blick
+
+| Spiel | Kern | Modi / Stufen | Größtes Risiko | Aufwand* |
+|---|---|---|---|---|
+| **Block-Puzzle** | Formen auf 8×8 ziehen, volle Reihen/Spalten verschwinden | Klassisch · Entspannt (endet nie, alle Formen legbar) | Ziehen am Handy (Form schwebt über dem Finger) | 4–6 T |
+| **Sudoku** | Generator mit eindeutiger Lösung, Bewertung durch einen Löser mit menschlichen Techniken | Leicht · Mittel · Schwer · Experte; später 6×6, Killer | Experte braucht am Handy bis ~5 s → Vorrat und Ersatzdatei | 8–10 T |
+| **Farben sortieren** | Umgießen, ganzer gleichfarbiger Block fließt; A*-Löser liefert Mindestzüge | Stufen nach Farben/Röhren, endlose Level, 1 Zusatzröhre als Hilfe | Löser stößt bei großen Leveln an die Grenze → „≤ X Züge“ | 7–8 T |
+| **Stau auflösen** | Schiebe-Rätsel, exakte Mindestzugzahl über Rückwärts-Suche | Klassisch (Zielfahrzeug raus) · Ausparken (alle raus, ganz entspannt) | schwere Level selten → ggf. Level-Paket über eine Generator-Seite | 8–9 T |
+| **Minesweeper** | Erster Klick immer auf einer Null, „ohne Raten“ optional; Unendlich über Seed+Koordinate in 16×16-Chunks | Anfänger · Fortgeschritten · Experte · eigene Größe · **Unendlich**; Entspannt/Hardcore | Leistung und Speicher bei riesigen aufgedeckten Flächen | 9–13 T |
+| **Nonogramm** | Zeilen-Löser prüft, dass ohne Raten lösbar; Zufallsbilder + eigene Motive | 5×5 bis 20×20, eigene Motive; später Farb-Nonogramm | Touch-Bedienung bei 20×20, Aufwand für Motive | 9–11 T |
+| **Grundgerüst** | Shell, Speicher, Eingabe, PWA, Design, Tests | – | Service-Worker-Updates, Löschung der Daten durch den Browser | ~7 T |
+
+\* Grobe Schätzung in Personentagen, wie ein Mensch sie bräuchte. Zusammen **ca. 52–64 T**. Mit Claude geht das deutlich schneller, das Verhältnis zwischen den Spielen stimmt aber.
+
+## 5. Reihenfolge und Meilensteine
+
+Jedes Spiel wird erst **ohne Oberfläche** gebaut und getestet (`logik.js` + Test-Seite), dann spielbar gemacht, dann bekommt es Komfort-Funktionen.
+
+### Phase 0 – Grundgerüst · Ziel: leere App läuft offline
+- [x] Ordner, `index.html`, `css/basis.css` (Variablen hell/dunkel)
+- [x] `werkzeuge/server.ps1` (Windows PowerShell 5.1, Skripte als UTF-8 mit BOM)
+- [x] Test-Seite `tests/index.html` + `mini-test.js`
+- [x] Router, Startseite mit 6 Kacheln, `spiele/registry.js` (Spiele erst bei Bedarf laden)
+- [x] Gemeinsame Module: `speicher`, `migration`, `rueckgaengig`, `zufall`, `einstellungen`, `statistik`, `eingabe`, `worker-helfer`, `farben`
+- [x] Spielansicht: Kopfleiste, Tastenkürzel, Neu-Dialog mit „Vorheriges fortsetzen“, Autospeichern (auch beim Ausblenden), „Gelöst“-Einblendung
+- [x] Beispielspiel „Lichter (Test)“ (nur auf localhost oder mit `?dev` sichtbar) zum Abnehmen der Schnittstelle
+- [x] PWA: Manifest, Icons, `sw.js`, `version.js`, Band „Neue Version verfügbar“
+- [x] Offline-Test: Service Worker cacht alle Dateien, App + Spiel + Worker starten ohne Netz (geprüft in Chromium/Electron). Installation am echten PC/Handy erst nach Veröffentlichung
+
+### Phase 1 – Block-Puzzle · erstes echtes Spiel
+Einfachstes Spiel. Es testet gleich das Ziehen mit Maus und Finger, das viele Spiele brauchen. → [block-puzzle.md §10](konzepte/block-puzzle.md)
+
+### Phase 2 – Sudoku · das Kernspiel
+→ [sudoku.md §10](konzepte/sudoku.md)
+
+### 🚩 Version 1.0 – erste Veröffentlichung
+Grundgerüst + Block-Puzzle + Sudoku, auf GitHub Pages, am PC und am Handy installiert. Ab hier wird die App schon täglich benutzt, und Rückmeldungen fließen in die weiteren Spiele ein.
+
+### Phase 3 – Farben sortieren → [farben-sortieren.md §10](konzepte/farben-sortieren.md)
+### Phase 4 – Stau auflösen → [stau-aufloesen.md §10](konzepte/stau-aufloesen.md)
+Teilt sich mit Phase 3 das Muster „Löser im Worker + endlose Level + Hinweis = nächster optimaler Zug“.
+
+### 🚩 Version 1.1
+
+### Phase 5 – Minesweeper → [minesweeper.md §10](konzepte/minesweeper.md)
+Erst Klassisch, dann „ohne Raten“, dann Unendlich.
+
+### Phase 6 – Nonogramm → [nonogramm.md §10](konzepte/nonogramm.md)
+Generator zuerst (kein Aufwand für Inhalte), Motive wachsen danach schrittweise.
+
+### 🚩 Version 1.2 – alle sechs Spiele
+
+### Phase 7 – Feinschliff
+- [ ] Sicherung exportieren/importieren (JSON-Datei)
+- [ ] Barrierefreiheits-Durchgang: nur Tastatur, Kontrast, farbenblind-Ansicht
+- [ ] Gerätetests: Handy hoch/quer, 360 px breit, großes PC-Fenster
+
+### Später (nicht in v1)
+Sudoku 6×6 / Killer / Diagonal · Farb-Nonogramm · weitere Motive · Abgleich zwischen PC und Handy (wie beim Anime Tracker über Google Drive) · weitere Spiele (z. B. Solitär, 2048-artig)
+
+## 6. Veröffentlichung
+
+- Lokal committen. **Push und Tag nur auf ausdrücklichen Wunsch** (wie beim Anime Tracker).
+- Jede Veröffentlichung erhöht die Version in `version.js`, sonst holt sich der Service Worker kein Update. Dazu ein Git-Tag `vX.Y.Z` und ein Eintrag in `CHANGELOG.md`.
+- Prüfliste vor dem Push: Tests grün · Precache-Liste aktuell · Version erhöht · offline getestet.
+
+## 7. Entscheidungen (04.11.2026)
+
+- **Name:** „Spielunterhaltung“. Die Spiele heißen in der App vorerst schlicht Sudoku, Farben sortieren, Block-Puzzle, Stau auflösen, Minesweeper, Nonogramm.
+- **Kein Timer**, auch nicht in der Statistik. Damit gibt es auch keine Pause-Ansicht und keine Bestzeiten. Die Einzelkonzepte erwähnen Timer und Pause noch, das gilt nicht mehr.
+- **Keine Tagesrätsel.** Sie sind in den Einzelkonzepten noch beschrieben, werden aber nicht gebaut.
+
+## 8. Lokal starten und prüfen
+
+```powershell
+# Testserver (läuft bis Strg+C)
+powershell -NoProfile -ExecutionPolicy Bypass -File werkzeuge\server.ps1
+# → App: http://localhost:8080/   Tests: http://localhost:8080/tests/
+
+# Nach neuen/entfernten Dateien die Cache-Liste aktualisieren (bei Veröffentlichung mit -Version x.y.z)
+powershell -NoProfile -ExecutionPolicy Bypass -File werkzeuge\precache-liste.ps1
+
+# Tests + Service Worker + Offline-Start in unsichtbarem Chromium (Server muss laufen)
+& "..\anime-tracker\node_modules\electron\dist\electron.exe" werkzeuge\offline-pruefung.cjs
+```
+Auf localhost holt der Service Worker Dateien zuerst aus dem Netz, damit Änderungen sofort sichtbar sind. Den Cache nimmt er nur, wenn kein Netz da ist.
+
+## 9. Offene Frage
+
+- **Reihenfolge:** passt Block-Puzzle → Sudoku → Farben → Stau → Minesweeper → Nonogramm?
