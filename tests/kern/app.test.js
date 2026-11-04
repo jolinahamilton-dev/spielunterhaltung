@@ -26,7 +26,8 @@ test('Precache: alle Importe, Worker und Stile der App sind gelistet', async () 
   const fehlend = new Set();
   const jsDateien = liste.filter((p) => p.endsWith('.js'));
   await Promise.all(jsDateien.map(async (p) => {
-    const quelle = await text(p);
+    // Kommentare entfernen, damit Beispiel-Importe in Kommentaren nicht mitzählen
+    const quelle = (await text(p)).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     const basis = new URL(p, wurzel);
     const muster = [
       /(?:import|export)\s[^'"]*?from\s*['"]([^'"]+)['"]/g,     // import … from '…'

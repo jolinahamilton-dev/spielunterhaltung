@@ -19,10 +19,11 @@ async function warteAuf(win, ausdruck, ms = 15000) {
 
 app.whenReady().then(async () => {
   const win = new BrowserWindow({ show: false, width: 1000, height: 800 });
-  const basis = 'http://localhost:8080/';
+  // andere Adresse prüfen (z. B. die veröffentlichte): $env:PRUEF_BASIS = 'https://…/spielunterhaltung/'
+  const basis = process.env.PRUEF_BASIS || 'http://localhost:8080/';
 
   await win.loadURL(basis + 'tests/');
-  console.log('TESTS:', await warteAuf(win, "document.getElementById('ergebnis')?.textContent"));
+  console.log('TESTS:', await warteAuf(win, "document.getElementById('ergebnis')?.textContent", 180000));
   console.log('FEHLER:', await win.webContents.executeJavaScript("[...document.querySelectorAll('li.fehler')].map(l=>l.textContent).join(' | ') || '-'"));
 
   await win.loadURL(basis + 'tests/sw-pruefung.html');
@@ -42,7 +43,14 @@ app.whenReady().then(async () => {
       if (document.querySelector('.warten') && !document.querySelector('.warten').hidden) return null;
       return 'ok (' + f.querySelectorAll('*').length + ' Elemente)';
     })()`, 30000);
-    console.log(`OFFLINE ${id}:`, r || 'ZEITÜBERSCHREITUNG');
+    // kurz warten (Generator im Worker) und dann den fertigen Inhalt zählen
+    await new Promise((ok) => setTimeout(ok, 4000));
+    const danach = await win.webContents.executeJavaScript(`({
+      elemente: document.getElementById('spielflaeche')?.querySelectorAll('*').length ?? 0,
+      wartet: !(document.querySelector('.warten')?.hidden ?? true),
+      text: (document.getElementById('spielflaeche')?.innerText || '').replace(/\\s+/g, ' ').slice(0, 70),
+    })`).catch(() => null);
+    console.log(`OFFLINE ${id}:`, r || 'ZEITÜBERSCHREITUNG', '→ nach 4 s:', JSON.stringify(danach));
     await win.webContents.executeJavaScript(`location.hash = '#/'`);
     await new Promise((ok) => setTimeout(ok, 300));
   }
