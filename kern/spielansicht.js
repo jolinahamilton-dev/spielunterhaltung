@@ -105,6 +105,8 @@ export async function zeigeSpiel(wurzel, eintrag, app) {
     meldung: (text) => app.meldung(text),
     meldeAenderung,
     meldeGewonnen,
+    /** Spiel ist von selbst zu Ende gegangen (z. B. Block-Puzzle) → neues Spiel ohne „Vorheriges fortsetzen“ */
+    neuesSpiel: () => starteNeu(zustand.variante, { abgeschlossen: true }),
   };
 
   let instanz = null;
@@ -199,8 +201,8 @@ export async function zeigeSpiel(wurzel, eintrag, app) {
     planeSpeichern();
   }
 
-  function starteNeu(variante) {
-    const ersetzt = zustand.begonnen && !zustand.geloest;
+  function starteNeu(variante, { abgeschlossen = false } = {}) {
+    const ersetzt = !abgeschlossen && zustand.begonnen && !zustand.geloest;
     if (ersetzt) {
       zaehleAufgegeben();
       vorher = { stand: instanz.getStand(), variante: zustand.variante, begonnen: true };

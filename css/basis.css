@@ -97,5 +97,8 @@ img, svg { display: block; }
   border-radius: var(--radius-klein);
 }
 
+/* Überschriften bekommen beim Seitenwechsel den Fokus (für Screenreader) – ohne sichtbaren Rahmen */
+h1[tabindex="-1"]:focus-visible { outline: none; }
+
 .leise { color: var(--text-leise); }
 .noscript { padding: var(--a5); }

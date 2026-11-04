@@ -1,6 +1,6 @@
 # Plan – Spielunterhaltung
 
-Stand: 04.11.2026 · Status: **Phase 0 (Grundgerüst) fertig**, Version 0.1.0 · nächster Schritt: Phase 1 Block-Puzzle
+Stand: 04.11.2026 · Status: **Phase 0 und 1 fertig** (Grundgerüst, Block-Puzzle), Version 0.2.0 · nächster Schritt: Phase 2 Sudoku
 
 Eine eigene, ruhige Spiele-App mit sechs Spielen: **Sudoku, Farben sortieren, Block-Puzzle, Stau auflösen, Minesweeper (mit Unendlich-Modus), Nonogramm**.
 Vor allem für den **PC**, aber auch fürs **Handy** gut spielbar. Läuft **komplett offline**.
@@ -99,6 +99,13 @@ Jedes Spiel wird erst **ohne Oberfläche** gebaut und getestet (`logik.js` + Tes
 
 ### Phase 1 – Block-Puzzle · erstes echtes Spiel
 Einfachstes Spiel. Es testet gleich das Ziehen mit Maus und Finger, das viele Spiele brauchen. → [block-puzzle.md §10](konzepte/block-puzzle.md)
+- [x] Logik ohne DOM (`logik.js`, `formen.js`): 13 Formgruppen, Bit-Masken, Punkte mit Serie und Leer-Bonus, fair gewichtetes Angebot mit Seed, Entspannt-Garantie (`legbar`, Suchbudget in Schritten), Hinweis, Rückgängig
+- [x] Modi Klassisch (endet, 3× Rückgängig, Joker +1 je 1500 Punkte, max. 3) und Entspannt (endet nie, alles unbegrenzt)
+- [x] Bedienung: Ziehen mit Maus/Finger (Form schwebt am Handy 1,5 Zellen über dem Finger), Antippen + Klick/Tippen aufs Feld, Tastatur 1–3 · Pfeile · Enter · Esc · J · H
+- [x] Vorschau mit Hervorhebung der Linien, die verschwinden; ruhiges Ausblenden (abschaltbar); Symbole auf Farben
+- [x] Spielende mit „Joker einsetzen“, „Letzten Zug zurück“, „Neues Spiel“; Rekord je Modus, auf der Kachel angezeigt
+- [x] 15 Logik-Tests, geprüft am PC (hell) und Handybreite (dunkel)
+- Bewusst weggelassen: Pause (kein Timer), Drehen der Formen, Top-10-Liste (nur ein Rekord je Modus)
 
 ### Phase 2 – Sudoku · das Kernspiel
 → [sudoku.md §10](konzepte/sudoku.md)

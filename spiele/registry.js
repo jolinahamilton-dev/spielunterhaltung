@@ -17,7 +17,12 @@ export const SPIELE = [
   {
     id: 'block-puzzle', name: 'Block-Puzzle', symbol: SPIEL_SYMBOLE['block-puzzle'],
     beschreibung: 'Formen auf das Feld legen, volle Reihen verschwinden.',
-    laden: null,
+    laden: () => import('./block-puzzle/index.js'),
+    kachelText(speicher) {
+      const r = speicher.lies('rekorde', {}) || {};
+      const best = Math.max(r.klassisch || 0, r.entspannt || 0);
+      return best ? `Rekord ${best.toLocaleString('de-DE')}` : '';
+    },
   },
   {
     id: 'stau', name: 'Stau auflösen', symbol: SPIEL_SYMBOLE.stau,

@@ -1,0 +1,144 @@
+/* Block-Puzzle. Feldgröße hängt am Fenster: Hochformat Angebot unter dem Feld, breites Querformat rechts daneben. */
+.bp {
+  --feld: clamp(232px, min(calc(100vw - 32px), calc(100dvh - 360px)), 520px);
+  --platz: calc(var(--feld) * 0.3);
+  display: grid;
+  grid-template-areas: "info" "feld" "seite";
+  justify-items: center;
+  gap: var(--a3);
+  width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+@media (min-width: 820px) and (min-aspect-ratio: 5/4) {
+  .bp {
+    --feld: clamp(280px, calc(100dvh - 190px), 600px);
+    --platz: calc(var(--feld) * 0.27);
+    grid-template-areas: "info info" "feld seite";
+    grid-template-columns: auto auto;
+    justify-content: center;
+    align-items: start;
+    column-gap: var(--a6);
+  }
+  .bp-seite { flex-direction: column; }
+  .bp-angebot { flex-direction: column; }
+}
+
+.bp-info { grid-area: info; display: flex; align-items: baseline; gap: var(--a5); min-height: 2.2rem; }
+.bp-zahl { display: flex; align-items: baseline; gap: var(--a2); }
+.bp-label { color: var(--text-leise); font-size: .85rem; }
+.bp-wert { font-size: 1.35rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.bp-serie { color: var(--akzent); font-weight: 600; font-size: .95rem; }
+
+/* ---------- Feld ---------- */
+.bp-feld-rahmen { grid-area: feld; position: relative; }
+.bp-feld {
+  width: var(--feld);
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  gap: 3px;
+  padding: 3px;
+  background: var(--rand);
+  border-radius: var(--radius);
+  touch-action: none;
+}
+.bp-zelle {
+  border-radius: 5px;
+  background: var(--flaeche-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bp-zelle.belegt { box-shadow: inset 0 -3px 0 rgb(0 0 0 / .14), inset 0 2px 0 rgb(255 255 255 / .18); }
+.bp-zelle.vorschau { opacity: .55; }
+.bp-zelle.raeumt { outline: 2px solid var(--text); outline-offset: -2px; opacity: 1; }
+.bp-zelle.raeumt:not(.belegt):not(.vorschau) { background: var(--akzent-sanft); }
+.bp-zelle.ungueltig { box-shadow: inset 0 0 0 2px var(--text-leise); }
+.bp-zelle.weg { animation: bp-weg 240ms ease-out forwards; }
+@keyframes bp-weg { to { opacity: 0; transform: scale(.6); } }
+
+.bp-symbol { width: 55%; height: 55%; fill: rgb(255 255 255 / .85); pointer-events: none; }
+
+/* ---------- Angebot ---------- */
+.bp-seite { grid-area: seite; display: flex; flex-direction: column; align-items: center; gap: var(--a3); }
+.bp-angebot { display: flex; gap: var(--a3); }
+.bp-platz {
+  width: var(--platz);
+  height: var(--platz);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--flaeche-2) 55%, transparent);
+  color: inherit;
+  padding: 0;
+  cursor: grab;
+  touch-action: none;
+  transition: background var(--dauer) ease-out, opacity var(--dauer) ease-out;
+}
+.bp-platz:hover:not(:disabled) { background: var(--flaeche-2); }
+.bp-platz:disabled { cursor: default; }
+.bp-platz.gewaehlt { background: var(--akzent-sanft); border-color: var(--akzent); }
+.bp-platz.hinweis { box-shadow: 0 0 0 3px var(--fokus); }
+.bp-platz.gezogen .bp-form { opacity: .25; }
+.bp-platz.passt-nicht .bp-form { opacity: .35; filter: grayscale(.7); }
+
+.bp-form, .bp-geist {
+  display: grid;
+  grid-template-columns: repeat(var(--b), var(--zelle));
+  grid-template-rows: repeat(var(--h), var(--zelle));
+  gap: 2px;
+  pointer-events: none;
+}
+.bp-form { --zelle: calc(var(--platz) / 5.6); }
+.bp-stein {
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / .14), inset 0 1px 0 rgb(255 255 255 / .18);
+}
+.bp-geist {
+  position: fixed;
+  left: 0;
+  top: 0;
+  gap: 3px;
+  z-index: 20;
+  opacity: .92;
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / .18));
+  will-change: transform;
+}
+.bp-geist .bp-stein { border-radius: 5px; }
+
+.bp-aktionen { display: flex; flex-direction: column; align-items: center; gap: var(--a2); }
+.bp-status { font-size: .85rem; text-align: center; }
+
+/* ---------- Ende ---------- */
+.bp-ende {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--hg) 60%, transparent);
+  border-radius: var(--radius);
+  animation: einblenden var(--dauer) ease-out;
+  padding: var(--a3);
+}
+.bp-ende-karte {
+  background: var(--flaeche);
+  border: 1px solid var(--rand);
+  border-radius: var(--radius);
+  box-shadow: var(--schatten);
+  padding: var(--a5);
+  text-align: center;
+  display: grid;
+  gap: var(--a2);
+}
+.bp-ende-titel { font-weight: 650; font-size: 1.15rem; }
+.bp-ende-punkte { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bp-ende-rekord { color: var(--erfolg); font-weight: 600; }
+.bp-ende-knoepfe { display: flex; flex-wrap: wrap; gap: var(--a2); justify-content: center; margin-top: var(--a2); }

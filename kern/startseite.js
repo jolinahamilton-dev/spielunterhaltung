@@ -8,6 +8,8 @@ export function zeigeStartseite(wurzel, app) {
     const huelle = app.speicher.bereich(`${spiel.id}:`).lies('stand');
     const offen = Boolean(huelle && huelle.begonnen && !huelle.geloest);
     const geloest = app.statistik.fuer(spiel.id).gesamt.geloest;
+    let extra = geloest ? `${geloest} gelöst` : '';
+    try { extra = spiel.kachelText?.(app.speicher.bereich(`${spiel.id}:daten:`)) || extra; } catch { /* egal */ }
     const verfuegbar = typeof spiel.laden === 'function';
 
     const status = !verfuegbar ? 'Kommt bald'
@@ -20,7 +22,7 @@ export function zeigeStartseite(wurzel, app) {
       h('span', { class: 'kachel-text', text: spiel.beschreibung }),
       h('span', { class: 'kachel-status' },
         h('span', { text: status }),
-        geloest ? h('span', { class: 'kachel-zahl', text: `${geloest} gelöst` }) : null,
+        extra ? h('span', { class: 'kachel-zahl', text: extra }) : null,
       ),
     ];
 

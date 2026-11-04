@@ -8,7 +8,12 @@ function setzeAttribute(el, attrs) {
     if (k === 'on') for (const [ev, fn] of Object.entries(v)) el.addEventListener(ev, fn);
     else if (k === 'text') el.textContent = v;
     else if (k === 'html') el.innerHTML = v;            // nur für feste, eigene SVG-Texte
-    else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    else if (k === 'style' && typeof v === 'object') {
+      for (const [name, wert] of Object.entries(v)) {
+        if (name.startsWith('--')) el.style.setProperty(name, String(wert));
+        else el.style[name] = wert;
+      }
+    }
     else if (k === 'dataset') Object.assign(el.dataset, v);
     else if (v === true) el.setAttribute(k, '');
     else el.setAttribute(k, String(v));

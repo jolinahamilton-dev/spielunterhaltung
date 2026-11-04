@@ -1,15 +1,15 @@
 // Wird von werkzeuge/precache-liste.ps1 geschrieben – Version hier oder per -Version erhöhen.
 // Jede Veröffentlichung braucht eine neue Version, sonst holt sich der Service Worker kein Update.
-self.SPIEL_VERSION = '0.1.0';
+self.SPIEL_VERSION = '0.2.0';
 self.SPIEL_DATEIEN = [
   './',
   './css/basis.css',
   './css/komponenten.css',
   './css/shell.css',
+  './icons/icon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
-  './icons/icon.svg',
   './index.html',
   './kern/app.js',
   './kern/dialog.js',
@@ -30,9 +30,14 @@ self.SPIEL_DATEIEN = [
   './kern/worker-helfer.js',
   './kern/zufall.js',
   './manifest.webmanifest',
+  './spiele/block-puzzle/formen.js',
+  './spiele/block-puzzle/index.js',
+  './spiele/block-puzzle/logik.js',
+  './spiele/block-puzzle/stil.css',
   './spiele/registry.js',
   './spiele/test-raster/generator.worker.js',
   './spiele/test-raster/index.js',
   './spiele/test-raster/logik.js',
   './spiele/test-raster/stil.css',
+  './version.js',
 ];

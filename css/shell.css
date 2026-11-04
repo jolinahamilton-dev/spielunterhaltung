@@ -52,8 +52,10 @@ a.kachel:hover { border-color: var(--akzent); transform: translateY(-1px); }
 .kachel-text { color: var(--text-leise); font-size: .92rem; }
 .kachel-status {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: var(--a2);
+  column-gap: var(--a3);
+  row-gap: 0;
   font-size: .85rem;
   color: var(--akzent);
   font-weight: 600;

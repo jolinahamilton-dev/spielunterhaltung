@@ -20,7 +20,7 @@ $dateien = Get-ChildItem -LiteralPath $wurzel -Recurse -File |
   ForEach-Object { $_.FullName.Substring($wurzel.Length).TrimStart('\', '/').Replace('\', '/') } |
   Where-Object { $_ -notmatch $ausgeschlossen } |
   Where-Object { $_ -notmatch '\.(md|ps1|mjs)$' } |
-  Where-Object { $_ -notin @('sw.js', '.nojekyll', '.gitignore') } |
+  Where-Object { $_ -notin @('sw.js', '.nojekyll', '.gitignore', '.gitattributes') } |
   Sort-Object
 
 $zeilen = $dateien | ForEach-Object { "  './$_'," }
