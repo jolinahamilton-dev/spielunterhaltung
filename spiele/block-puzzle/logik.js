@@ -305,10 +305,23 @@ export function startPosition(brett, formId) {
 }
 
 /** Prüft einen geladenen Stand grob auf Gültigkeit */
+const istZahl = (x) => typeof x === 'number' && Number.isFinite(x);
+const istZaehler = (x) => x === null || x === Infinity || (Number.isInteger(x) && x >= 0);
+
+function istGueltigerZug(z) {
+  return Boolean(z) && typeof z === 'object' && z.version === 1 && MODI.includes(z.modus)
+    && typeof z.seed === 'string' && z.seed.length <= 64
+    && Array.isArray(z.brett) && z.brett.length === N * N && z.brett.every((f) => Number.isInteger(f) && f >= 0 && f <= 10)
+    && Array.isArray(z.angebot) && z.angebot.length === 3 && z.angebot.every((id) => id === null || Object.hasOwn(FORM, id))
+    && Array.isArray(z.rng) && z.rng.length === 4 && z.rng.every((x) => Number.isInteger(x) && x >= 0 && x <= 0xffffffff)
+    && [z.punkte, z.serie, z.ohneAbraeumen, z.zuege, z.naechsterJokerBei].every(istZahl)
+    && istZaehler(z.joker) && istZaehler(z.rueckgaengigRest) && typeof z.beendet === 'boolean';
+}
+
+/** Prüft einen geladenen Stand gründlich (er kann aus einer fremden Sicherungsdatei stammen) */
 export function istGueltig(z) {
-  return z && z.version === 1 && MODI.includes(z.modus) && Array.isArray(z.brett) && z.brett.length === N * N
-    && Array.isArray(z.angebot) && z.angebot.length === 3 && z.angebot.every((id) => id === null || FORM[id])
-    && Array.isArray(z.rng) && Array.isArray(z.verlauf);
+  return istGueltigerZug(z) && Array.isArray(z.verlauf) && z.verlauf.length <= VERLAUF_MAX
+    && z.verlauf.every((v) => istGueltigerZug(v) && !('verlauf' in v));
 }
 
 /** JSON kennt kein Infinity → beim Speichern als null, beim Laden zurück */

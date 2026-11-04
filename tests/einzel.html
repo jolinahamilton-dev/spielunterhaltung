@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Einzeltest · Spielunterhaltung</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; }
+    .ok { color: #2f7a4a; } .fehler { color: #b84a3e; font-weight: 600; } .summe { font-weight: 700; }
+  </style>
+  <script src="../version.js"></script>
+</head>
+<body>
+  <p>Aufruf: <code>tests/einzel.html?datei=spiele/sudoku.test.js</code> (mehrere Dateien mit Komma)</p>
+  <div id="ziel"></div>
+  <script type="module">
+    import { starte } from './mini-test.js';
+    const dateien = (new URLSearchParams(location.search).get('datei') || '').split(',').filter(Boolean);
+    for (const d of dateien) {
+      // nur Testdateien aus dem tests-Ordner zulassen
+      if (!/^[\w/-]+\.test\.js$/.test(d)) throw new Error(`Ungültiger Dateiname: ${d}`);
+      await import(`./${d}`);
+    }
+    window.testErgebnis = await starte(document.getElementById('ziel'));
+  </script>
+</body>
+</html>

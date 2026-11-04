@@ -1,0 +1,159 @@
+/* Sudoku. Hochformat: Ziffernleiste unter dem Feld · breites Querformat/PC: Leiste rechts daneben. */
+.sd {
+  --feld: clamp(260px, min(calc(100vw - 16px), calc(100dvh - 330px)), 540px);
+  --zelle: calc(var(--feld) / 9);
+  display: grid;
+  grid-template-areas: "feld" "seite";
+  justify-items: center;
+  align-content: start;
+  gap: var(--a3);
+  width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- Feld ---------- */
+.sd-feld-rahmen { grid-area: feld; }
+.sd-feld {
+  width: var(--feld);
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(9, 1fr);
+  border: 2px solid var(--text-leise);
+  border-radius: var(--radius-klein);
+  overflow: hidden;
+  background: var(--flaeche);
+  touch-action: manipulation;
+  font-size: calc(var(--zelle) * .56);
+}
+.sd-wartet .sd-feld { opacity: .35; }
+.sd-reihe { display: contents; }
+.sd-zelle {
+  appearance: none;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--rand);
+  border-bottom: 1px solid var(--rand);
+  border-radius: 0;
+  background: var(--flaeche);
+  color: var(--text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.sd-zelle.sd-rechts { border-right: 2px solid var(--text-leise); }
+.sd-zelle.sd-unten { border-bottom: 2px solid var(--text-leise); }
+.sd-zelle.sd-letzte-spalte { border-right: 0; }
+.sd-zelle.sd-letzte-zeile { border-bottom: 0; }
+
+.sd-zelle.sd-fest { font-weight: 700; }
+.sd-zelle:not(.sd-fest) .sd-wert { color: var(--akzent); font-weight: 500; }
+.sd-zelle.sd-bereich { background: color-mix(in srgb, var(--flaeche-2) 65%, var(--flaeche)); }
+.sd-zelle.sd-gleich { background: var(--akzent-sanft); }
+.sd-zelle.sd-gleich .sd-wert { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .14em; }
+.sd-zelle.sd-gewaehlt { background: color-mix(in srgb, var(--akzent) 32%, var(--flaeche)); }
+.sd-zelle.sd-bezug { background: color-mix(in srgb, var(--erfolg) 18%, var(--flaeche)); }
+.sd-zelle.sd-konflikt { background: var(--fehler-sanft); }
+.sd-zelle.sd-konflikt .sd-wert {
+  color: var(--fehler);
+  text-decoration: underline wavy;
+  text-decoration-thickness: 2px;
+  text-underline-offset: .16em;
+}
+.sd-zelle.sd-hinweis::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 2px dashed var(--erfolg);
+  border-radius: 4px;
+  pointer-events: none;
+}
+.sd-zelle:focus { outline: none; }
+.sd-zelle:focus-visible { outline: 3px solid var(--fokus); outline-offset: -3px; z-index: 1; }
+
+.sd-notizen {
+  position: absolute;
+  inset: 1px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  font-size: calc(var(--zelle) * .27);
+  font-weight: 500;
+  color: var(--text-leise);
+  pointer-events: none;
+}
+.sd-notizen span { display: flex; align-items: center; justify-content: center; border-radius: 3px; }
+.sd-notizen .sd-treffer { background: var(--akzent); color: var(--akzent-text); font-weight: 700; }
+.sd-wert:not(:empty) + .sd-notizen { display: none; }
+
+/* ---------- Leiste ---------- */
+.sd-seite { grid-area: seite; display: flex; flex-direction: column; gap: var(--a2); width: var(--feld); max-width: 100%; }
+.sd-kopf { display: flex; justify-content: space-between; gap: var(--a2); font-size: .92rem; color: var(--text-leise); }
+.sd-stufe-name { font-weight: 650; color: var(--text); }
+.sd-ziffern { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.sd-ziffer {
+  appearance: none;
+  min-height: 52px;
+  padding: 2px 0;
+  border: 1px solid var(--rand);
+  border-radius: var(--radius-klein);
+  background: var(--flaeche);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.4rem;
+  font-weight: 650;
+  line-height: 1.05;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.sd-ziffer:hover { border-color: var(--akzent); }
+.sd-ziffer:focus { outline: none; }
+.sd-ziffer:focus-visible { outline: 3px solid var(--fokus); outline-offset: 2px; }
+.sd-ziffer-rest { font-size: .68rem; font-weight: 500; color: var(--text-leise); min-height: 1em; }
+.sd-ziffer.sd-aktuell { border-color: var(--akzent); box-shadow: inset 0 0 0 1px var(--akzent); }
+.sd-ziffer.sd-erledigt { background: var(--flaeche-2); color: var(--text-leise); }
+.sd-ziffer.sd-erledigt .sd-ziffer-rest { color: var(--erfolg); font-weight: 700; }
+.sd-notizmodus .sd-ziffer:not(.sd-loeschen) { border-style: dashed; }
+.sd-notizmodus .sd-ziffer-zahl { font-size: .8em; font-style: italic; }
+.sd-loeschen { font-size: .95rem; font-weight: 600; }
+
+.sd-aktionen { display: flex; flex-wrap: wrap; gap: var(--a2); }
+.sd-aktionen .knopf { flex: 1; }
+.sd-schalter { transition: none; }
+.sd-schalter[aria-pressed="true"] { background: var(--akzent); border-color: var(--akzent); color: var(--akzent-text); }
+.sd-info { margin: 0; min-height: 2.8em; font-size: .92rem; line-height: 1.4; }
+
+@media (max-height: 640px) and (max-width: 819px) {
+  .sd { --feld: clamp(240px, min(calc(100vw - 16px), calc(100dvh - 290px)), 540px); gap: var(--a2); }
+  .sd-ziffer { min-height: 44px; }
+  .sd-info { min-height: 0; }
+}
+
+@media (min-width: 820px) and (min-aspect-ratio: 5/4) {
+  .sd {
+    --feld: clamp(300px, calc(100dvh - 130px), 580px);
+    grid-template-areas: "feld seite";
+    grid-template-columns: auto minmax(220px, 270px);
+    justify-content: center;
+    align-items: center;
+    align-content: center;
+    column-gap: var(--a6);
+  }
+  .sd-seite { width: 100%; }
+  .sd-ziffern { grid-template-columns: repeat(3, 1fr); }
+  .sd-ziffer { min-height: 64px; font-size: 1.6rem; }
+  .sd-loeschen { grid-column: 1 / -1; min-height: 48px; font-size: 1rem; }
+}

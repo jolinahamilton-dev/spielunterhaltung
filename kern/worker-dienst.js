@@ -4,8 +4,9 @@
 export function bedieneAuftraege(auftraege) {
   self.addEventListener('message', async (e) => {
     const { id, auftrag, daten } = e.data || {};
-    const fn = auftraege[auftrag];
-    if (!fn) {
+    // nur eigene Aufträge – keine geerbten Eigenschaften wie „constructor“
+    const fn = typeof auftrag === 'string' && Object.hasOwn(auftraege, auftrag) ? auftraege[auftrag] : null;
+    if (typeof fn !== 'function') {
       self.postMessage({ id, fehler: `Unbekannter Auftrag „${auftrag}“` });
       return;
     }

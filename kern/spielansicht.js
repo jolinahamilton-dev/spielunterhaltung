@@ -273,6 +273,8 @@ export async function zeigeSpiel(wurzel, eintrag, app) {
     if (e.defaultPrevented || document.querySelector('dialog[open]')) return;
     const ziel = e.target;
     if (ziel instanceof HTMLElement && ziel.closest('input, select, textarea')) return;
+    // Enter/Leertaste auf Knöpfen der Kopfleiste oder des Bands gehören dem Knopf, nicht dem Spiel
+    if ((e.key === 'Enter' || e.key === ' ') && ziel instanceof HTMLElement && ziel.closest('.kopfleiste, .band, .gewonnen')) return;
 
     if (!zustand.geloest && instanz?.onTaste?.(e) === true) { e.preventDefault(); return; }
 

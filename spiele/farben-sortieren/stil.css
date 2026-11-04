@@ -1,0 +1,116 @@
+/* Farben sortieren. Röhren in 1–2 Reihen, Breite passt sich dem Fenster an (ab 360 px). */
+.fs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--a4);
+  width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.fs-info {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  column-gap: var(--a4);
+  row-gap: var(--a1);
+  min-height: 1.6rem;
+}
+.fs-stufe { font-weight: 650; font-size: 1.05rem; }
+.fs-zaehler { color: var(--text-leise); font-variant-numeric: tabular-nums; }
+
+/* ---------- Feld ---------- */
+.fs-feld {
+  --spalten: 6;
+  --k: 4;
+  --luecke: 8px;
+  --breite: clamp(38px, calc((100vw - 32px - (var(--spalten) - 1) * var(--luecke)) / var(--spalten)), 60px);
+  --schicht: calc(var(--breite) * 0.78);
+  display: grid;
+  grid-template-columns: repeat(var(--spalten), var(--breite));
+  column-gap: var(--luecke);
+  row-gap: var(--a3);
+  justify-content: center;
+  padding: 14px var(--a1) var(--a1);
+  touch-action: none;
+  max-width: 100%;
+}
+@media (min-width: 700px) { .fs-feld { --luecke: 14px; } }
+@media (max-height: 700px) and (min-width: 700px) { .fs-feld { --schicht: calc(var(--breite) * 0.62); } }
+
+.fs-roehre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--a1);
+  cursor: pointer;
+  border-radius: var(--radius-klein);
+  position: relative;
+  transition: transform var(--dauer) ease-out;
+  outline-offset: 3px;
+}
+.fs-glas {
+  width: 100%;
+  height: calc(var(--k) * (var(--schicht) + 2px) + 6px);
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  padding: 3px;
+  border: 2px solid var(--rand);
+  border-top-width: 0;
+  border-radius: 4px 4px calc(var(--breite) / 2.4) calc(var(--breite) / 2.4);
+  background: color-mix(in srgb, var(--flaeche) 75%, transparent);
+  overflow: hidden;
+  transition: border-color var(--dauer) ease-out, background var(--dauer) ease-out;
+}
+.fs-schicht {
+  flex: 0 0 var(--schicht);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / .12), inset 0 1px 0 rgb(255 255 255 / .18);
+}
+.fs-schicht:first-child { border-bottom-left-radius: calc(var(--breite) / 2.8); border-bottom-right-radius: calc(var(--breite) / 2.8); }
+.fs-symbol { width: 52%; height: 52%; max-height: 80%; fill: rgb(255 255 255 / .88); stroke: rgb(0 0 0 / .35); stroke-width: .5; pointer-events: none; }
+.fs-nr { font-size: .78rem; color: var(--text-leise); font-variant-numeric: tabular-nums; line-height: 1; }
+
+.fs-roehre:hover .fs-glas { border-color: var(--text-leise); }
+.fs-roehre:focus-visible { outline: 3px solid var(--fokus); }
+.fs-gewaehlt { transform: translateY(-12px); }
+.fs-gewaehlt .fs-glas { border-color: var(--akzent); background: var(--akzent-sanft); }
+.fs-ziel-ok .fs-glas { border-color: color-mix(in srgb, var(--akzent) 60%, var(--rand)); border-style: dashed; }
+.fs-ueber .fs-glas { border-color: var(--akzent); border-style: solid; box-shadow: 0 0 0 3px var(--akzent-sanft); }
+.fs-fehl .fs-glas { border-color: var(--text-leise); background: var(--flaeche-2); }
+
+/* fertige Röhre: Deckel */
+.fs-fertig::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: -2px;
+  right: -2px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--text-leise);
+}
+.fs-fertig .fs-nr { color: var(--erfolg); }
+
+/* Hinweis: Quelle und Ziel */
+.fs-hinweis-quelle .fs-glas, .fs-hinweis-ziel .fs-glas { border-color: var(--fokus); border-style: solid; box-shadow: 0 0 0 3px color-mix(in srgb, var(--fokus) 30%, transparent); }
+.fs-hinweis-quelle .fs-nr, .fs-hinweis-ziel .fs-nr { color: var(--fokus); font-weight: 700; }
+.fs-hinweis-quelle .fs-nr::after { content: " ↑"; }
+.fs-hinweis-ziel .fs-nr::after { content: " ↓"; }
+
+/* Eingießen: neue Schichten wachsen von unten */
+.fs-neu { animation: fs-einfliessen 200ms ease-out; transform-origin: bottom; }
+@keyframes fs-einfliessen { from { transform: scaleY(.15); opacity: .3; } }
+:root[data-bewegung="reduziert"] .fs-neu, :root[data-bewegung="aus"] .fs-neu { animation: none; }
+:root[data-bewegung="reduziert"] .fs-roehre, :root[data-bewegung="aus"] .fs-roehre { transition: none; }
+
+/* ---------- Leiste ---------- */
+.fs-leiste { display: flex; gap: var(--a2); flex-wrap: wrap; justify-content: center; }
+.fs-leiste .knopf { min-height: var(--treffer); }
+.fs-status { min-height: 2.6em; max-width: 34rem; text-align: center; font-size: .92rem; padding: 0 var(--a2); }

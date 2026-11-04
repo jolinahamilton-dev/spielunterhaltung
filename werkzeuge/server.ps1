@@ -51,7 +51,10 @@ try {
       $relativ = $pfad.TrimStart('/').Replace('/', [System.IO.Path]::DirectorySeparatorChar)
       $voll = [System.IO.Path]::GetFullPath((Join-Path $wurzel $relativ))
 
-      if (-not $voll.StartsWith($wurzel, [StringComparison]::OrdinalIgnoreCase)) {
+      # nur innerhalb des Projektordners; versteckte Ordner/Dateien (.git, .claude …) nie ausliefern
+      $innen = $voll.StartsWith($wurzel + [System.IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)
+      $versteckt = ($pfad -split '/') -match '^\.' -and $pfad -ne '/.nojekyll'
+      if (-not $innen -or $versteckt) {
         Sende $antwort 403 ([Text.Encoding]::UTF8.GetBytes('Verboten')) 'text/plain; charset=utf-8'
       }
       elseif (Test-Path -LiteralPath $voll -PathType Container) {

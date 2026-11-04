@@ -7,12 +7,12 @@ export const SPIELE = [
   {
     id: 'sudoku', name: 'Sudoku', symbol: SPIEL_SYMBOLE.sudoku,
     beschreibung: 'Ziffern 1–9 in jede Zeile, Spalte und jeden Block.',
-    laden: null,
+    laden: () => import('./sudoku/index.js'),
   },
   {
     id: 'farben-sortieren', name: 'Farben sortieren', symbol: SPIEL_SYMBOLE['farben-sortieren'],
     beschreibung: 'Farbschichten umgießen, bis jede Röhre einfarbig ist.',
-    laden: null,
+    laden: () => import('./farben-sortieren/index.js'),
   },
   {
     id: 'block-puzzle', name: 'Block-Puzzle', symbol: SPIEL_SYMBOLE['block-puzzle'],
@@ -27,17 +27,17 @@ export const SPIELE = [
   {
     id: 'stau', name: 'Stau auflösen', symbol: SPIEL_SYMBOLE.stau,
     beschreibung: 'Fahrzeuge verschieben, bis der Weg frei ist.',
-    laden: null,
+    laden: () => import('./stau/index.js'),
   },
   {
     id: 'minesweeper', name: 'Minesweeper', symbol: SPIEL_SYMBOLE.minesweeper,
     beschreibung: 'Minen finden mit Logik – auch auf unendlichem Feld.',
-    laden: null,
+    laden: () => import('./minesweeper/index.js'),
   },
   {
     id: 'nonogramm', name: 'Nonogramm', symbol: SPIEL_SYMBOLE.nonogramm,
     beschreibung: 'Zahlen am Rand verraten, welche Felder ein Bild ergeben.',
-    laden: null,
+    laden: () => import('./nonogramm/index.js'),
   },
   {
     id: 'test-raster', name: 'Lichter (Test)', symbol: SPIEL_SYMBOLE.test, entwicklung: true,

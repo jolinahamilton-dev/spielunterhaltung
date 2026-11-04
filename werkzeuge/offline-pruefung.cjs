@@ -32,5 +32,19 @@ app.whenReady().then(async () => {
   win.webContents.session.enableNetworkEmulation({ offline: true });
   await win.loadURL(basis + '#/spiel/test-raster').catch((e) => console.log('LADEN:', e.message));
   console.log('OFFLINE:', await warteAuf(win, "(() => { const i = document.querySelector('.lichter-info'); return i && i.textContent ? 'App + Spiel offline geladen: ' + i.textContent : null })()"));
+  // Alle Spiele offline öffnen: Spielfläche gefüllt, keine Fehlermeldung, keine dauerhafte Warte-Anzeige
+  for (const id of ['sudoku', 'farben-sortieren', 'block-puzzle', 'stau', 'minesweeper', 'nonogramm']) {
+    await win.webContents.executeJavaScript(`location.hash = '#/spiel/${id}'`);
+    const r = await warteAuf(win, `(() => {
+      const f = document.getElementById('spielflaeche');
+      if (!f || !f.children.length) return null;
+      if (document.querySelector('.fehler-text')) return 'FEHLER: ' + document.querySelector('.fehler-text').textContent;
+      if (document.querySelector('.warten') && !document.querySelector('.warten').hidden) return null;
+      return 'ok (' + f.querySelectorAll('*').length + ' Elemente)';
+    })()`, 30000);
+    console.log(`OFFLINE ${id}:`, r || 'ZEITÜBERSCHREITUNG');
+    await win.webContents.executeJavaScript(`location.hash = '#/'`);
+    await new Promise((ok) => setTimeout(ok, 300));
+  }
   app.quit();
 });

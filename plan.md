@@ -1,6 +1,6 @@
 # Plan – Spielunterhaltung
 
-Stand: 04.11.2026 · Status: **Phase 0 und 1 fertig** (Grundgerüst, Block-Puzzle), Version 0.2.0 · nächster Schritt: Phase 2 Sudoku
+Stand: 04.11.2026 · Status: **alle sechs Spiele fertig, Phase 0–7 erledigt**, Version 0.4.0 · nächster Schritt: Veröffentlichung (auf Wunsch)
 
 Eine eigene, ruhige Spiele-App mit sechs Spielen: **Sudoku, Farben sortieren, Block-Puzzle, Stau auflösen, Minesweeper (mit Unendlich-Modus), Nonogramm**.
 Vor allem für den **PC**, aber auch fürs **Handy** gut spielbar. Läuft **komplett offline**.
@@ -107,30 +107,22 @@ Einfachstes Spiel. Es testet gleich das Ziehen mit Maus und Finger, das viele Sp
 - [x] 15 Logik-Tests, geprüft am PC (hell) und Handybreite (dunkel)
 - Bewusst weggelassen: Pause (kein Timer), Drehen der Formen, Top-10-Liste (nur ein Rekord je Modus)
 
-### Phase 2 – Sudoku · das Kernspiel
-→ [sudoku.md §10](konzepte/sudoku.md)
+### Phase 2–6 – die übrigen fünf Spiele ✅ (parallel von je einem Agent gebaut, Briefing: [konzepte/AGENT-BRIEFING.md](konzepte/AGENT-BRIEFING.md))
+- [x] **Sudoku**: 4 Stufen, Generator mit eindeutiger Lösung + menschlichem Löser (Singles bis Swordfish/Coloring), Vorrat im Hintergrund + `vorrat.json`, Notizen/Auto-Notizen, Konflikte, erklärender Hinweis, Rückgängig/Wiederholen – 14 Tests
+- [x] **Farben sortieren**: 5 Stufen mit fortlaufenden Leveln, A*-Löser (Mindestzüge), Hinweis = optimaler Zug inkl. Sackgassen-Erkennung, Zusatzröhre 1× je Level – 10 Tests
+- [x] **Stau auflösen**: Leicht/Mittel/Schwer mit exakter Mindestzugzahl + entspannter Modus „Ausparken“, Ziehen/Klick/Tastatur, Hinweis – 14 Tests. Schwere Level brauchen beim ersten Mal bis ~9 s (danach vorab erzeugt)
+- [x] **Minesweeper**: Anfänger/Fortgeschritten/Experte/Unendlich, erster Klick immer Null, „Ohne Raten“, Entspannt/Hardcore, Canvas, Unendlich mit Chunks (Dichte ≥ 15 %) – 23 Tests
+- [x] **Nonogramm**: 27 eigene Motive + Zufall 5–20, Zeilen-Löser (ohne Raten eindeutig), Ziehen/Kreuze, Zoom + Cursor-Modus am Handy, erklärender Hinweis – 12 Tests
 
-### 🚩 Version 1.0 – erste Veröffentlichung
-Grundgerüst + Block-Puzzle + Sudoku, auf GitHub Pages, am PC und am Handy installiert. Ab hier wird die App schon täglich benutzt, und Rückmeldungen fließen in die weiteren Spiele ein.
+### Phase 7 – Feinschliff ✅
+- [x] Sicherung speichern/laden (Info-Seite) mit strenger Prüfung + „Stand vor dem Laden zurückholen“ – 5 Tests
+- [x] Content-Security-Policy ohne `unsafe-inline`, `no-referrer`; Testserver mit exaktem Pfadschutz, liefert keine versteckten Ordner
+- [x] Robustheitstest: jedes Spiel mit ~100 manipulierten Spielständen (`tests/einzel.html?datei=kern/robustheit.test.js`, ca. 1 Min.)
+- [x] Prüfung aller Spiele am PC (hell) und bei 360 px (dunkel): keine Konsolenfehler, kein waagerechtes Scrollen; alle sechs Spiele starten offline
+- [ ] Gerätetests auf echtem Handy und mit echter Maus (erst nach Veröffentlichung möglich)
 
-### Phase 3 – Farben sortieren → [farben-sortieren.md §10](konzepte/farben-sortieren.md)
-### Phase 4 – Stau auflösen → [stau-aufloesen.md §10](konzepte/stau-aufloesen.md)
-Teilt sich mit Phase 3 das Muster „Löser im Worker + endlose Level + Hinweis = nächster optimaler Zug“.
-
-### 🚩 Version 1.1
-
-### Phase 5 – Minesweeper → [minesweeper.md §10](konzepte/minesweeper.md)
-Erst Klassisch, dann „ohne Raten“, dann Unendlich.
-
-### Phase 6 – Nonogramm → [nonogramm.md §10](konzepte/nonogramm.md)
-Generator zuerst (kein Aufwand für Inhalte), Motive wachsen danach schrittweise.
-
-### 🚩 Version 1.2 – alle sechs Spiele
-
-### Phase 7 – Feinschliff
-- [ ] Sicherung exportieren/importieren (JSON-Datei)
-- [ ] Barrierefreiheits-Durchgang: nur Tastatur, Kontrast, farbenblind-Ansicht
-- [ ] Gerätetests: Handy hoch/quer, 360 px breit, großes PC-Fenster
+### 🚩 Version 1.0 – Veröffentlichung (wartet auf „Update“)
+Neues GitHub-Repo, GitHub Pages, Installation am PC und Handy.
 
 ### Später (nicht in v1)
 Sudoku 6×6 / Killer / Diagonal · Farb-Nonogramm · weitere Motive · Abgleich zwischen PC und Handy (wie beim Anime Tracker über Google Drive) · weitere Spiele (z. B. Solitär, 2048-artig)
@@ -160,8 +152,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File werkzeuge\precache-liste.ps1
 # Tests + Service Worker + Offline-Start in unsichtbarem Chromium (Server muss laufen)
 & "..\anime-tracker\node_modules\electron\dist\electron.exe" werkzeuge\offline-pruefung.cjs
 ```
+Einzelne Seiten, Tests oder Screenshots im unsichtbaren Chromium (Optionen im Kopf der Datei):
+```powershell
+& .\werkzeuge\test-lauf.ps1 -Url "http://localhost:8080/tests/einzel.html?datei=kern/robustheit.test.js" -Zeit 300000
+```
 Auf localhost holt der Service Worker Dateien zuerst aus dem Netz, damit Änderungen sofort sichtbar sind. Den Cache nimmt er nur, wenn kein Netz da ist.
 
-## 9. Offene Frage
-
-- **Reihenfolge:** passt Block-Puzzle → Sudoku → Farben → Stau → Minesweeper → Nonogramm?

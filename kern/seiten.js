@@ -2,7 +2,10 @@
 import { h, symbol } from './dom.js';
 import { ICONS } from './symbole.js';
 import { zeigeDialog } from './dialog.js';
-import { sichtbareSpiele } from '../spiele/registry.js';
+import { sichtbareSpiele, findeSpiel } from '../spiele/registry.js';
+import {
+  erstelleSicherung, pruefeSicherung, spieleEin, dateiName, hatBackup, stelleBackupWiederHer, MAX_DATEI_BYTES,
+} from './sicherung.js';
 
 function seitenKopf(text) {
   const titel = h('h1', { class: 'spiel-titel', tabindex: '-1', text });
@@ -127,6 +130,75 @@ export function zeigeInfo(wurzel, app) {
     installKnopf,
     h('h2', { text: 'Speicher' }),
     speicherText,
+    sicherungsBereich(app),
   ));
   return { fokus: titel, verlasse() {} };
+}
+
+function lokalerSpeicher() {
+  try { return globalThis.localStorage; } catch { return null; }
+}
+
+function sicherungsBereich(app) {
+  const backend = lokalerSpeicher();
+  if (!backend) return h('p', { class: 'leise', text: 'Sicherungen sind in diesem Fenster nicht möglich (kein dauerhafter Speicher).' });
+
+  const datei = h('input', { type: 'file', accept: '.json,application/json', hidden: true });
+
+  function speichern() {
+    const s = erstelleSicherung(backend, self.SPIEL_VERSION || '?');
+    const blob = new Blob([JSON.stringify(s, null, 1)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = h('a', { href: url, download: dateiName() });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  datei.addEventListener('change', async () => {
+    const f = datei.files?.[0];
+    datei.value = '';
+    if (!f) return;
+    if (f.size > MAX_DATEI_BYTES) { app.meldung('Die Datei ist zu groß für eine Sicherung.'); return; }
+    const p = pruefeSicherung(await f.text());
+    if (!p.ok) { app.meldung(p.fehler); return; }
+    const namen = p.spiele.map((id) => findeSpiel(id)?.name).filter(Boolean);
+    const datum = p.datum ? new Date(p.datum).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : 'unbekannt';
+    const ja = await zeigeDialog({
+      titel: 'Sicherung laden?',
+      inhalt: [
+        h('p', { text: `Sicherung vom ${datum}${namen.length ? ` mit Spielständen von: ${namen.join(', ')}` : ''}.` }),
+        h('p', { text: 'Alle aktuellen Spielstände, Einstellungen und Statistiken werden dadurch ersetzt. Der jetzige Stand lässt sich danach hier einmal wiederherstellen.' }),
+      ],
+      knoepfe: [{ text: 'Laden', wert: true, primaer: true }, { text: 'Abbrechen', wert: false }],
+    });
+    if (!ja) return;
+    const r = spieleEin(backend, p.sicherung);
+    if (!r.ok) { app.meldung(r.fehler); return; }
+    location.reload();
+  });
+
+  async function wiederherstellen() {
+    const ja = await zeigeDialog({
+      titel: 'Früheren Stand wiederherstellen?',
+      inhalt: h('p', { text: 'Der Stand von vor dem letzten Laden einer Sicherung ersetzt die jetzigen Daten.' }),
+      knoepfe: [{ text: 'Wiederherstellen', wert: true, primaer: true }, { text: 'Abbrechen', wert: false }],
+    });
+    if (!ja) return;
+    const r = stelleBackupWiederHer(backend);
+    if (!r.ok) { app.meldung(r.fehler); return; }
+    location.reload();
+  }
+
+  return h('section', { class: 'gruppe', 'aria-labelledby': 'sicherung-titel' },
+    h('h2', { id: 'sicherung-titel', text: 'Sicherung' }),
+    h('p', { class: 'leise', text: 'Spielstände, Rekorde, Statistik und Einstellungen als Datei speichern – z. B. zum Umziehen auf ein anderes Gerät.' }),
+    h('div', { class: 'segment' },
+      h('button', { type: 'button', class: 'knopf', on: { click: speichern } }, 'Sicherung speichern'),
+      h('button', { type: 'button', class: 'knopf', on: { click: () => datei.click() } }, 'Sicherung laden'),
+      hatBackup(backend) ? h('button', { type: 'button', class: 'knopf', on: { click: wiederherstellen } }, 'Stand vor dem Laden zurückholen') : null,
+    ),
+    datei,
+  );
 }

@@ -1,0 +1,63 @@
+/* Stau auflösen. Spielfeld als SVG, Größe hängt an Breite und Höhe des Fensters. */
+.st {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--a3);
+  width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.st-info {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--a1) var(--a4);
+  width: min(100%, 560px);
+}
+.st-titel { font-weight: 650; }
+.st-zaehler { font-variant-numeric: tabular-nums; color: var(--text-leise); }
+.st-status { font-size: .9rem; text-align: center; max-width: 560px; }
+
+.st-feld {
+  width: min(100%, 560px, calc((100dvh - 230px) * var(--verh, 1)));
+  min-width: 240px;
+  aspect-ratio: var(--verh, 1);
+  height: auto;
+  touch-action: none;
+  overflow: hidden;
+}
+
+.st-rand { fill: var(--rand); }
+.st-boden { fill: var(--flaeche-2); }
+.st-platz { fill: var(--flaeche); opacity: .55; }
+.st-ausgang { fill: var(--akzent-sanft); }
+.st-ausgang-pfeil { fill: var(--akzent); }
+.st-ziel-punkt { fill: var(--text-leise); opacity: .45; }
+.st-schatten { fill: none; stroke: var(--akzent); stroke-width: 6; stroke-dasharray: 14 10; }
+
+/* ---------- Fahrzeuge ---------- */
+.st-fz {
+  cursor: grab;
+  transition: transform var(--dauer) ease-out, opacity var(--dauer) ease-out;
+  outline: none;
+}
+.st-fz.st-zieht { transition: none; cursor: grabbing; }
+.st-fz.st-federt { transition-duration: 100ms; }
+.st-fz.st-faehrt { opacity: 0; pointer-events: none; }
+.st-fz.st-draussen { display: none; }
+.st-koerper { stroke: rgb(0 0 0 / .22); stroke-width: 3; }
+.st-dach { fill: rgb(255 255 255 / .26); }
+.st-ladung { fill: rgb(0 0 0 / .12); }
+.st-symbol { fill: rgb(0 0 0 / .5); }
+.st-pfeil { fill: #fff; stroke: rgb(0 0 0 / .55); stroke-width: .5; paint-order: stroke; }
+.st-stern { fill: #fff; stroke: rgb(0 0 0 / .6); stroke-width: .6; paint-order: stroke; }
+/* Zielfahrzeug: zusätzlich zur Farbe ein kräftiger doppelter Rand */
+.st-ziel .st-koerper { stroke: var(--text); stroke-width: 6; }
+
+.st-rahmen { fill: none; stroke: none; stroke-width: 7; }
+.st-fz.st-gewaehlt .st-rahmen { stroke: var(--text); }
+.st-fz:focus-visible .st-rahmen { stroke: var(--fokus); stroke-width: 9; }
+.st-fz.st-hinweis .st-rahmen { stroke: var(--akzent); stroke-dasharray: 16 10; stroke-width: 9; }
+.st-fz.st-blockiert .st-koerper { stroke: var(--fehler); stroke-width: 9; }
