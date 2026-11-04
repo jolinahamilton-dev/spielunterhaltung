@@ -1,6 +1,6 @@
 # Plan – Spielunterhaltung
 
-Stand: 04.11.2026 · Status: **alle sechs Spiele fertig, Phase 0–7 erledigt**, Version 0.4.0 · nächster Schritt: Veröffentlichung (auf Wunsch)
+Stand: 04.11.2026 · Status: **Version 1.0.0 veröffentlicht** – https://jolinahamilton-dev.github.io/spielunterhaltung/
 
 Eine eigene, ruhige Spiele-App mit sechs Spielen: **Sudoku, Farben sortieren, Block-Puzzle, Stau auflösen, Minesweeper (mit Unendlich-Modus), Nonogramm**.
 Vor allem für den **PC**, aber auch fürs **Handy** gut spielbar. Läuft **komplett offline**.
@@ -121,7 +121,7 @@ Einfachstes Spiel. Es testet gleich das Ziehen mit Maus und Finger, das viele Sp
 - [x] Prüfung aller Spiele am PC (hell) und bei 360 px (dunkel): keine Konsolenfehler, kein waagerechtes Scrollen; alle sechs Spiele starten offline
 - [ ] Gerätetests auf echtem Handy und mit echter Maus (erst nach Veröffentlichung möglich)
 
-### 🚩 Version 1.0 – Veröffentlichung (wartet auf „Update“)
+### 🚩 Version 1.0 – veröffentlicht am 04.11.2026
 Neues GitHub-Repo, GitHub Pages, Installation am PC und Handy.
 
 ### Später (nicht in v1)
