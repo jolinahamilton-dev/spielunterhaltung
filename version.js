@@ -1,6 +1,6 @@
 // Wird von werkzeuge/precache-liste.ps1 geschrieben – Version hier oder per -Version erhöhen.
 // Jede Veröffentlichung braucht eine neue Version, sonst holt sich der Service Worker kein Update.
-self.SPIEL_VERSION = '1.1.0';
+self.SPIEL_VERSION = '1.1.1';
 self.SPIEL_DATEIEN = [
   './',
   './css/basis.css',
