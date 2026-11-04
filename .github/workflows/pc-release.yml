@@ -1,0 +1,75 @@
+# Baut bei jedem Versions-Tag (z. B. v1.1.0) die Windows-App, veröffentlicht sie als GitHub-Release und
+# aktualisiert das Scoop-Manifest (bucket/spielunterhaltung.json) – darüber zeigt UniGetUI das Update an.
+name: PC-App veröffentlichen
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  bauen:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      hash: ${{ steps.hash.outputs.hash }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Tag passt zu package.json und version.js?
+        id: version
+        shell: pwsh
+        run: |
+          $v = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ("v$v" -ne '${{ github.ref_name }}') { throw "Tag ${{ github.ref_name }} passt nicht zu package.json ($v)" }
+          if ((Get-Content version.js -Raw) -notmatch "SPIEL_VERSION = '$([regex]::Escape($v))'") { throw "version.js hat nicht Version $v" }
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Electron und electron-builder installieren (feste Versionen aus package.json)
+        run: npm install --no-audit --no-fund
+
+      - name: Installer und Zip erstellen
+        run: npx electron-builder --win --publish never
+
+      - name: Prüfsumme für Scoop
+        id: hash
+        shell: pwsh
+        run: |
+          $h = (Get-FileHash 'release/spielunterhaltung-${{ steps.version.outputs.version }}-win.zip' -Algorithm SHA256).Hash.ToLower()
+          "hash=$h" >> $env:GITHUB_OUTPUT
+
+      - name: GitHub-Release anlegen
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = '${{ steps.version.outputs.version }}'
+          git fetch --force origin "refs/tags/${{ github.ref_name }}:refs/tags/${{ github.ref_name }}"
+          gh release create '${{ github.ref_name }}' "release/Spielunterhaltung-Setup-$v.exe" "release/spielunterhaltung-$v-win.zip" `
+            --title "Spielunterhaltung $v" --notes-from-tag
+
+  scoop:
+    needs: bauen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Scoop-Manifest auf die neue Version setzen
+        run: |
+          v='${{ needs.bauen.outputs.version }}'
+          jq --arg v "$v" --arg h '${{ needs.bauen.outputs.hash }}' \
+            '.version = $v
+             | .architecture."64bit".url = "https://github.com/jolinahamilton-dev/spielunterhaltung/releases/download/v\($v)/spielunterhaltung-\($v)-win.zip"
+             | .architecture."64bit".hash = $h' bucket/spielunterhaltung.json > neu.json
+          mv neu.json bucket/spielunterhaltung.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add bucket/spielunterhaltung.json
+          git commit -m "Scoop: Spielunterhaltung $v" || echo 'Manifest unverändert'
+          git push origin main

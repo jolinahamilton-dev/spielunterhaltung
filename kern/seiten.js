@@ -2,6 +2,7 @@
 import { h, symbol } from './dom.js';
 import { ICONS } from './symbole.js';
 import { zeigeDialog } from './dialog.js';
+import { istDesktopApp } from './update.js';
 import { sichtbareSpiele, findeSpiel } from '../spiele/registry.js';
 import {
   erstelleSicherung, pruefeSicherung, spieleEin, dateiName, hatBackup, stelleBackupWiederHer, MAX_DATEI_BYTES,
@@ -124,10 +125,15 @@ export function zeigeInfo(wurzel, app) {
   wurzel.replaceChildren(kopf, h('main', { class: 'seite' },
     h('p', null, h('strong', { text: 'Spielunterhaltung' }), ` · Version ${self.SPIEL_VERSION || '?'}`),
     h('p', { text: 'Ruhige Spiele zum Abschalten. Ohne Werbung, ohne Töne, ohne Zeitdruck – und komplett offline nutzbar.' }),
-    h('h2', { text: 'Als App installieren' }),
-    h('p', { text: 'PC: In Edge oder Chrome in der Adressleiste auf „App installieren“ klicken. Danach startet die App im eigenen Fenster und aus dem Startmenü.' }),
-    h('p', { text: 'Handy: Im Chrome-Menü „Zum Startbildschirm hinzufügen“ bzw. „App installieren“ wählen.' }),
-    installKnopf,
+    ...(istDesktopApp() ? [
+      h('h2', { text: 'Windows-App' }),
+      h('p', { text: 'Du nutzt die Windows-App. Neue Versionen zeigt UniGetUI unter „Updates“ an.' }),
+    ] : [
+      h('h2', { text: 'Als App installieren' }),
+      h('p', { text: 'PC: Am besten die Windows-App über UniGetUI installieren (Anleitung im Repository unter docs/PC-APP.md). Alternativ in Edge oder Chrome in der Adressleiste auf „App installieren“ klicken.' }),
+      h('p', { text: 'Handy: Im Chrome-Menü „Zum Startbildschirm hinzufügen“ bzw. „App installieren“ wählen.' }),
+      installKnopf,
+    ]),
     h('h2', { text: 'Speicher' }),
     speicherText,
     sicherungsBereich(app),

@@ -3,8 +3,11 @@ import { h } from './dom.js';
 
 const PRUEF_ABSTAND_MS = 6 * 60 * 60 * 1000;
 
+/** Läuft die App als Windows-App (Electron, Schema app:)? Dort gibt es keinen Service Worker. */
+export const istDesktopApp = () => location.protocol === 'app:';
+
 export function starteServiceWorker({ vorNeuladen = () => {} } = {}) {
-  if (!('serviceWorker' in navigator)) return;
+  if (!('serviceWorker' in navigator) || istDesktopApp()) return;
   let neuLaden = false;
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {

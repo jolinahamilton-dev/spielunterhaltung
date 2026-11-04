@@ -1,2 +1,4 @@
 .claude/
 Thumbs.db
+node_modules/
+release/

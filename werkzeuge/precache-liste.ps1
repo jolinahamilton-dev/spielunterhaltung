@@ -15,12 +15,12 @@ if (-not $Version) {
 }
 
 # Nicht in den Cache: Entwicklungs-Ordner, Dokumente, der Service Worker selbst
-$ausgeschlossen = '^(\.git|\.claude|tests|werkzeuge|konzepte)(/|$)'
+$ausgeschlossen = '^(\.git|\.github|\.claude|tests|werkzeuge|konzepte|docs|desktop|bucket|node_modules|release)(/|$)'
 $dateien = Get-ChildItem -LiteralPath $wurzel -Recurse -File |
   ForEach-Object { $_.FullName.Substring($wurzel.Length).TrimStart('\', '/').Replace('\', '/') } |
   Where-Object { $_ -notmatch $ausgeschlossen } |
   Where-Object { $_ -notmatch '\.(md|ps1|mjs)$' } |
-  Where-Object { $_ -notin @('sw.js', '.nojekyll', '.gitignore', '.gitattributes') } |
+  Where-Object { $_ -notin @('sw.js', '.nojekyll', '.gitignore', '.gitattributes', 'package.json', 'package-lock.json') } |
   Sort-Object
 
 $zeilen = $dateien | ForEach-Object { "  './$_'," }
@@ -35,3 +35,12 @@ $($zeilen -join "`n")
 "@
 [System.IO.File]::WriteAllText($ziel, $inhalt + "`n", [System.Text.UTF8Encoding]::new($false))
 Write-Host "version.js: Version $Version, $($dateien.Count + 1) Einträge"
+
+# Version der Windows-App (package.json) gleichziehen – nur die Zeile "version", Rest unverändert
+$paket = Join-Path $wurzel 'package.json'
+if (Test-Path $paket) {
+  $text = [System.IO.File]::ReadAllText($paket)
+  $neu = [regex]::Replace($text, '"version":\s*"[^"]*"', "`"version`": `"$Version`"", 1)
+  if ($neu -ne $text) { [System.IO.File]::WriteAllText($paket, $neu, [System.Text.UTF8Encoding]::new($false)) }
+  Write-Host "package.json: Version $Version"
+}

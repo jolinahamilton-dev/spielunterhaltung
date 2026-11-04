@@ -1,0 +1,49 @@
+{
+  "name": "spielunterhaltung",
+  "version": "1.1.0",
+  "description": "Ruhige Spiele zum Abschalten – offline, ohne Werbung, ohne Töne",
+  "main": "desktop/main.cjs",
+  "private": true,
+  "author": "jolinahamilton-dev",
+  "license": "ISC",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --publish never"
+  },
+  "build": {
+    "appId": "com.jolina.spielunterhaltung",
+    "productName": "Spielunterhaltung",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "package.json",
+      "desktop/**/*",
+      "index.html",
+      "version.js",
+      "manifest.webmanifest",
+      "css/**/*",
+      "kern/**/*",
+      "spiele/**/*",
+      "icons/**/*"
+    ],
+    "win": {
+      "icon": "icons/icon-512.png",
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "artifactName": "spielunterhaltung-${version}-win.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "artifactName": "Spielunterhaltung-Setup-${version}.${ext}"
+    }
+  },
+  "devDependencies": {
+    "electron": "42.4.0",
+    "electron-builder": "26.15.3"
+  }
+}

@@ -1,5 +1,9 @@
 # Änderungen
 
+## 1.1.0 – 04.11.2026
+- Neu: **Windows-App** (eigenes Programm mit Startmenü-Eintrag, ohne Browser, komplett offline). Installation und Updates über UniGetUI/Scoop wie beim Anime Tracker – Anleitung in `docs/PC-APP.md`
+- Info-Seite zeigt in der Windows-App den Hinweis auf UniGetUI-Updates
+
 ## 1.0.0 – 04.11.2026
 Erste Veröffentlichung.
 
