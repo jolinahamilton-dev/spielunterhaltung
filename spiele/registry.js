@@ -67,7 +67,7 @@ export const SPIELE = [
   {
     id: 'malen-nach-zahlen', name: 'Malen nach Zahlen', symbol: SPIEL_SYMBOLE['malen-nach-zahlen'],
     beschreibung: 'Feld für Feld ein Bild ausmalen – jede Zahl hat ihre Farbe.',
-    laden: null,
+    laden: () => import('./malen-nach-zahlen/index.js'),
   },
   {
     id: 'test-raster', name: 'Lichter (Test)', symbol: SPIEL_SYMBOLE.test, entwicklung: true,

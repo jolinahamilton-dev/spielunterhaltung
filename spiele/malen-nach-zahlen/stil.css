@@ -1,0 +1,124 @@
+/* Malen nach Zahlen: Info oben, Malfläche (Canvas) füllt den Platz, darunter Zoom-Knöpfe und Farbleiste. */
+.mz {
+  align-self: stretch;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--a3);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mz-info { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: var(--a2) var(--a4); min-height: 1.6rem; }
+.mz-titel { font-weight: 650; font-size: 1.1rem; }
+.mz-rest { font-size: .92rem; font-variant-numeric: tabular-nums; }
+
+/* ---------- Malfläche ---------- */
+.mz-buehne {
+  position: relative;
+  flex: 1;
+  min-height: 260px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius);
+  touch-action: none;
+}
+.mz-leinwand {
+  position: absolute;
+  inset: 0;
+  display: block;
+  touch-action: none;
+  cursor: crosshair;
+  border-radius: var(--radius);
+}
+.mz-leinwand[hidden] { display: none; }
+.mz-leinwand:focus { outline: none; }
+.mz-leinwand:focus-visible { outline: 3px solid var(--fokus); outline-offset: -3px; }
+.mz-laden { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; }
+.mz-laden[hidden] { display: none; }
+.mz-buehne.mz-fertig .mz-leinwand { animation: mz-gross 250ms ease-out; }
+@keyframes mz-gross { from { transform: scale(.94); opacity: .7; } to { transform: none; opacity: 1; } }
+
+/* ---------- Werkzeuge ---------- */
+.mz-werkzeuge { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--a2); }
+.mz-werkzeuge[hidden] { display: none; }
+.mz-werkzeuge .knopf { padding: 0 var(--a3); }
+.mz-zoom { min-width: var(--treffer); font-size: 1.3rem; line-height: 1; }
+
+/* ---------- Farbleiste ---------- */
+.mz-leiste {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--a2);
+  padding-bottom: var(--a1);
+}
+.mz-leiste[hidden] { display: none; }
+.mz-farbe {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 48px;
+  padding: 5px;
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  background: var(--flaeche);
+  box-shadow: inset 0 0 0 1px var(--rand);
+  cursor: pointer;
+  color: var(--text);
+}
+.mz-farbe:hover { box-shadow: inset 0 0 0 1px var(--akzent); }
+.mz-farbe.gewaehlt { border-color: var(--text); box-shadow: none; }
+.mz-farbe.fertig:not(.gewaehlt) { opacity: .55; }
+.mz-farbe-feld {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-klein);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 3px rgb(0 0 0 / .45);
+}
+.mz-farbe-feld.hell { color: #1d2329; text-shadow: 0 0 3px rgb(255 255 255 / .55); }
+.mz-farbe-symbol { position: absolute; inset: 3px; width: auto; height: auto; fill: currentColor; opacity: .28; }
+.mz-farbe-nr { position: relative; }
+.mz-farbe-balken { display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--flaeche-2); overflow: hidden; }
+.mz-farbe-fuell { display: block; height: 100%; width: 0; background: var(--akzent); }
+.mz-farbe.fertig .mz-farbe-fuell { background: var(--erfolg); }
+
+/* nur für Vorleseprogramme */
+.mz-vorlesen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 420px) {
+  .mz { gap: var(--a2); }
+  .mz-werkzeuge { gap: 6px; }
+  .mz-werkzeuge .knopf { padding: 0 10px; font-size: .9rem; }
+  .mz-zoom { min-width: 42px; }
+  .mz-farbe { min-width: 44px; padding: 4px; }
+  .mz-farbe-feld { width: 32px; height: 32px; }
+  .mz-farbe-balken { width: 32px; }
+  .mz-buehne { min-height: 240px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mz-buehne.mz-fertig .mz-leinwand { animation: none; }
+}
