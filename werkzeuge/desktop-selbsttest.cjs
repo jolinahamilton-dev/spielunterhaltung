@@ -28,7 +28,7 @@ module.exports = async function selbsttest(win, ordner) {
   console.log('START:', JSON.stringify(await js(`({ url: location.href, titel: document.title, kacheln: document.querySelectorAll('.kachel').length, version: self.SPIEL_VERSION })`)));
   await bild('start');
 
-  for (const id of ['sudoku', 'farben-sortieren', 'block-puzzle', 'stau', 'minesweeper', 'nonogramm']) {
+  for (const id of ['sudoku', 'farben-sortieren', 'block-puzzle', 'stau', 'minesweeper', 'nonogramm', 'bild-abtragen', 'sechseck-stapel', 'rechenkreuz', 'wortsuche', 'malen-nach-zahlen']) {
     await js(`location.hash = '#/spiel/${id}'`);
     // Auswahl beim ersten Start: warten, bis sie da ist, dann „Standard nehmen“
     for (let i = 0; i < 20; i++) {
