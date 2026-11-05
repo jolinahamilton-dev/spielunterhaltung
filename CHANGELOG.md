@@ -1,6 +1,6 @@
 # Änderungen
 
-## 1.4.0 – in Arbeit
+## 1.4.0 – 05.11.2026
 - Sudoku: neue Eingabeart **„Ziffer zuerst“** (Standard) – Ziffer unten wählen, dann alle passenden Felder antippen; erneutes Antippen entfernt die Ziffer, Rechtsklick/langes Drücken setzt eine Notiz. Umschalter „Eingabe: Ziffer zuerst / Feld zuerst“
 - Neues Spiel **Sechseck-Stapel**: Stapel auf Waben legen, gleiche Farben wandern zusammen, ab 10 lösen sie sich auf. Entspannt (endet nie), Leicht, Mittel, Schwer
 - Neues Spiel **Rechenkreuz**: Rechenaufgaben kreuz und quer, die sich Zahlenfelder teilen; fehlende Zahlen aus dem Vorrat einsetzen. Leicht (+ −), Mittel (+ − ×), Schwer (alle Rechenarten), immer eindeutig lösbar
