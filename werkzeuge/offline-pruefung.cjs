@@ -32,10 +32,12 @@ app.whenReady().then(async () => {
   // Offline: Netz komplett abschalten und App neu laden
   win.webContents.session.enableNetworkEmulation({ offline: true });
   await win.loadURL(basis + '#/spiel/test-raster').catch((e) => console.log('LADEN:', e.message));
+  await new Promise((ok) => setTimeout(ok, 700)); await win.webContents.executeJavaScript("document.querySelector('dialog[open] .dialog-fuss .knopf')?.click()").catch(() => {}); // Auswahl beim ersten Start: Standard
   console.log('OFFLINE:', await warteAuf(win, "(() => { const i = document.querySelector('.lichter-info'); return i && i.textContent ? 'App + Spiel offline geladen: ' + i.textContent : null })()"));
   // Alle Spiele offline öffnen: Spielfläche gefüllt, keine Fehlermeldung, keine dauerhafte Warte-Anzeige
   for (const id of ['sudoku', 'farben-sortieren', 'block-puzzle', 'stau', 'minesweeper', 'nonogramm']) {
     await win.webContents.executeJavaScript(`location.hash = '#/spiel/${id}'`);
+    await new Promise((ok) => setTimeout(ok, 700)); await win.webContents.executeJavaScript("document.querySelector('dialog[open] .dialog-fuss .knopf')?.click()").catch(() => {}); // Auswahl beim ersten Start: Standard
     const r = await warteAuf(win, `(() => {
       const f = document.getElementById('spielflaeche');
       if (!f || !f.children.length) return null;

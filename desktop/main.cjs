@@ -13,6 +13,11 @@ const WURZEL = path.join(__dirname, '..');
 // Nur diese Teile der App werden ausgeliefert (keine Tests, Werkzeuge, Konzepte …)
 const ERLAUBT = /^(index\.html|version\.js|manifest\.webmanifest|(css|kern|spiele|icons)\/[\w./-]+)$/;
 
+// Selbsttest nie mit den echten Spielständen: eigener, frischer Datenordner
+if (process.env.SPIEL_SELBSTTEST) {
+  app.setPath('userData', path.join(app.getPath('temp'), `spielunterhaltung-selbsttest-${process.pid}`));
+}
+
 protocol.registerSchemesAsPrivileged([
   { scheme: SCHEMA, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
 ]);

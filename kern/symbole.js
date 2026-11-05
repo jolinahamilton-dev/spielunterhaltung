@@ -13,6 +13,7 @@ export const ICONS = Object.freeze({
   statistik: svg('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'),
   info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/>'),
   schliessen: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
+  auswahl: svg('<path d="M7 10l5 5 5-5"/>'),
 });
 
 /** Spiel-Symbole für die Kacheln (48×48, gefüllt mit Akzent-/Spielfarben) */

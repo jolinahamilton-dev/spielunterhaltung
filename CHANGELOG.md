@@ -1,5 +1,11 @@
 # Änderungen
 
+## 1.2.0 – 05.11.2026
+- Schwierigkeit (bzw. Modus/Rätselart/Größe) jederzeit wählbar: Knopf neben dem Spielnamen zeigt die aktuelle Stufe, Klick öffnet die Auswahl
+- Beim ersten Öffnen eines Spiels erscheint die Auswahl gleich zu Beginn
+- Dialoge melden die Wahl sofort (vorher konnte in der Windows-App ein Dialog „hängen“, wenn das Fenster im Hintergrund war)
+- Selbsttest der Windows-App nutzt nie die echten Spielstände
+
 ## 1.1.1 – 04.11.2026
 - Erste veröffentlichte Version der Windows-App (Inhalt wie 1.1.0 – dessen automatischer Build war nicht angelaufen)
 

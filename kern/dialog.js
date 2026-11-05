@@ -22,12 +22,22 @@ export function zeigeDialog({ titel, inhalt = [], knoepfe = [{ text: 'OK', wert:
       ) : null,
     );
 
+    // Ergebnis direkt melden – nicht erst über das „close“-Ereignis, das in Hintergrundfenstern
+    // verzögert kommen kann. Esc/Klick daneben laufen weiterhin über „close“.
+    let erledigt = false;
+    function abschliessen() {
+      if (erledigt) return;
+      erledigt = true;
+      dlg.remove();
+      fertig(ergebnis);
+    }
     function schliesse(wert) {
       ergebnis = wert;
-      dlg.close();
+      if (dlg.open) dlg.close();
+      abschliessen();
     }
 
-    dlg.addEventListener('close', () => { dlg.remove(); fertig(ergebnis); });
+    dlg.addEventListener('close', abschliessen);
     dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
     // Knöpfe im Inhalt können den Dialog über ein Ereignis schließen
     dlg.addEventListener('dialog-wert', (e) => schliesse(e.detail));

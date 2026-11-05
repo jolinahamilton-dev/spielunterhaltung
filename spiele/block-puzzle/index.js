@@ -12,6 +12,7 @@ export default {
   id: 'block-puzzle',
   name: 'Block-Puzzle',
   beschreibung: 'Formen auf das Feld legen, volle Reihen und Spalten verschwinden.',
+  variantenTitel: 'Modus',
   varianten: [
     { id: 'klassisch', name: 'Klassisch – endet, wenn nichts mehr passt' },
     { id: 'entspannt', name: 'Entspannt – endet nie' },

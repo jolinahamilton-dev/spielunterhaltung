@@ -78,6 +78,23 @@ a.kachel:hover { border-color: var(--akzent); transform: translateY(-1px); }
 }
 .spiel-titel { flex: 1; font-size: 1.1rem; font-weight: 650; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kopf-knoepfe { display: flex; gap: var(--a1); }
+.spiel-titel { flex: 0 1 auto; }
+.variante-knopf {
+  margin-right: auto;
+  gap: var(--a1);
+  padding: 0 var(--a2) 0 var(--a3);
+  max-width: 45vw;
+  background: var(--akzent-sanft);
+  border-color: transparent;
+  color: var(--text);
+}
+.variante-knopf:hover:not(:disabled) { border-color: var(--akzent); }
+.variante-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.variante-pfeil svg { width: 18px; height: 18px; }
+.auswahl-aktuell { margin-left: auto; font-size: .85rem; font-weight: 500; }
+@media (max-width: 560px) {
+  .variante-knopf { max-width: 34vw; padding: 0 var(--a1) 0 var(--a2); }
+}
 
 /* ---------- Spielansicht ---------- */
 .spiel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
