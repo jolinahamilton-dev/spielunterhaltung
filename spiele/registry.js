@@ -47,7 +47,7 @@ export const SPIELE = [
   {
     id: 'rechenkreuz', name: 'Rechenkreuz', symbol: SPIEL_SYMBOLE.rechenkreuz,
     beschreibung: 'Rechenaufgaben kreuz und quer – jede Zahl muss in beide Richtungen passen.',
-    laden: null,
+    laden: () => import('./rechenkreuz/index.js'),
   },
   {
     id: 'sechseck-stapel', name: 'Sechseck-Stapel', symbol: SPIEL_SYMBOLE['sechseck-stapel'],
@@ -62,7 +62,7 @@ export const SPIELE = [
   {
     id: 'wortsuche', name: 'Wortsuche', symbol: SPIEL_SYMBOLE.wortsuche,
     beschreibung: 'Versteckte Wörter im Buchstabengitter finden.',
-    laden: null,
+    laden: () => import('./wortsuche/index.js'),
   },
   {
     id: 'malen-nach-zahlen', name: 'Malen nach Zahlen', symbol: SPIEL_SYMBOLE['malen-nach-zahlen'],
