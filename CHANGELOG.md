@@ -1,5 +1,8 @@
 # Änderungen
 
+## 1.4.1 – 05.11.2026
+- Bild abtragen: Mehrere Sammler arbeiten jetzt **gleichzeitig** – ein weiterer Sammler kann jederzeit losgeschickt werden und steigt in die laufende Arbeit ein (vorher war der erste beim zweiten Antippen schlagartig fertig). Rückgängig funktioniert auch mitten im Lauf.
+
 ## 1.4.0 – 05.11.2026
 - Sudoku: neue Eingabeart **„Ziffer zuerst“** (Standard) – Ziffer unten wählen, dann alle passenden Felder antippen; erneutes Antippen entfernt die Ziffer, Rechtsklick/langes Drücken setzt eine Notiz. Umschalter „Eingabe: Ziffer zuerst / Feld zuerst“
 - Neues Spiel **Sechseck-Stapel**: Stapel auf Waben legen, gleiche Farben wandern zusammen, ab 10 lösen sie sich auf. Entspannt (endet nie), Leicht, Mittel, Schwer

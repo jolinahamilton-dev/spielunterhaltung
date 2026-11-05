@@ -3,6 +3,7 @@ import {
   STUFEN, STUFEN_IDS, istFrei, freiesPixel, laufe, tippe, kannTippen, rueckgaengig, wiederholen, neustart,
   gewonnen, festgefahren, restPixel, pruefeMotiv, motiveFuer, motivStufe, farbAnzahl, erzeugeMosaik,
   erzeugeLevel, loesungsReihenfolge, loese, hinweis, wegLoest, istGueltig, zumSpeichern, ausSpeicher, wartet,
+  setze, setzeWieder, runde, ruhig, arbeitet,
 } from '../../spiele/bild-abtragen/logik.js';
 import { erstelleZufall } from '../../kern/zufall.js';
 
@@ -63,6 +64,69 @@ test('Gleichzeitigkeit: wartender Sammler arbeitet weiter, sobald ein anderer fr
   const r = tippe(z, 1);
   wahr(gewonnen(r.zustand));
   wahr(r.runden.some((runde) => runde.length === 2), 'beide arbeiten in einer Runde');
+});
+
+test('Echtzeit: zweiter Sammler steigt mitten in die Arbeit ein, beide arbeiten gleichzeitig', () => {
+  // je 4 Pixel Farbe 0 und 1, alle am Rand frei
+  let z = level(['0011', '0011'], [[[0, 4]], [[1, 4]]], 2);
+  z = setze(z, 0).zustand;
+  wahr(arbeitet(z), 'Sammler 0 hat Arbeit');
+  z = runde(z).zustand;                       // Sammler 0 holt ein Pixel
+  gleich(z.plaetze[0][2], 3);
+  z = setze(z, 1).zustand;                    // Sammler 1 kommt dazu, während 0 noch arbeitet
+  const r = runde(z);
+  gleich(r.runde.length, 2, 'beide holen in derselben Runde');
+  z = ruhig(r.zustand);
+  wahr(gewonnen(z));
+  tief(z.plaetze, [null, null]);
+  gleich(z.verlauf.length, 2);
+  gleich(z.verlauf[0].px.length + z.verlauf[1].px.length, 8, 'alle Pixel im Verlauf');
+});
+
+test('Echtzeit: Rückgängig mitten im Lauf stellt den Stand vor dem Einsatz genau her', () => {
+  let z = level(['0011', '0011'], [[[0, 4]], [[1, 4]]], 2);
+  z = setze(z, 0).zustand;
+  z = runde(z).zustand;
+  const vorEinsatz = JSON.stringify({ rest: z.rest, pos: z.pos, plaetze: z.plaetze });
+  z = setze(z, 1).zustand;
+  z = runde(z).zustand;
+  z = runde(z).zustand;
+  const zurueck = rueckgaengig(z);
+  gleich(JSON.stringify({ rest: zurueck.rest, pos: zurueck.pos, plaetze: zurueck.plaetze }), vorEinsatz);
+  wahr(arbeitet(zurueck), 'Sammler 0 arbeitet danach weiter');
+  // Wiederholen setzt den Sammler erneut ein; zu Ende gerechnet ist das Bild leer
+  wahr(gewonnen(ruhig(setzeWieder(zurueck).zustand)));
+});
+
+test('Echtzeit: echte Level mit überlappenden Einsätzen bleiben gültig und lassen sich vollständig zurücknehmen', () => {
+  for (const stufe of STUFEN_IDS) {
+    for (let s = 0; s < 10; s++) {
+      const start = erzeugeLevel({ stufe, level: 5, seed: `echtzeit-${stufe}-${s}`, motive });
+      let z = start;
+      // Lösungsreihenfolge, aber jeder Sammler wird schon nach 1–2 Runden des vorigen eingesetzt
+      for (const [j, k] of start.loesung.entries()) {
+        if (!z.plaetze.includes(null)) z = ruhig(z);
+        const r = setze(z, k);
+        if (!r) break;
+        z = r.zustand;
+        for (let n = 0; n < 1 + (j % 2); n++) { const w = runde(z); if (w) z = w.zustand; }
+        wahr(istGueltig(ruhig(z)), `${stufe}/${s}: ruhiger Stand nach Einsatz ${j} gültig`);
+      }
+      // alles zurücknehmen → Anfangsbild
+      let u = z;
+      while (u.verlauf.length) u = rueckgaengig(u);
+      tief(u.rest, start.rest, `${stufe}/${s}: Rückgängig bis zum Anfang`);
+    }
+  }
+});
+
+test('Echtzeit: Ergebnis ohne Zwischenrunden = sofort zu Ende gerechnet (wie bisher)', () => {
+  let a = level(['00000', '01110', '00000'], [[[1, 3]], [[0, 12]]], 2);
+  const sofort = tippe(tippe(a, 0).zustand, 1).zustand;
+  let b2 = ruhig(setze(a, 0).zustand);
+  b2 = ruhig(setze(b2, 1).zustand);
+  tief(b2.rest, sofort.rest);
+  tief(b2.plaetze, sofort.plaetze);
 });
 
 test('Ladungen je Farbe = Pixel der Farbe (Generator, alle Stufen)', () => {

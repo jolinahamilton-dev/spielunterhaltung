@@ -35,7 +35,9 @@ export default {
     try { z = gespeichert ? L.ausSpeicher(gespeichert) : null; } catch { z = null; }
     if (z && L.gewonnen(z)) z = null;
 
-    let anim = null;          // laufende Animation { view, runden, schritt, timer, gewinn }
+    let takt = 0;             // Timer der laufenden Arbeitsrunden (0 = alles ruhig)
+    let weg = null;           // in der letzten Runde abgetragene Pixel (zum Ausblenden)
+    let gemeldet = false;     // Gewinn dieses Levels schon gemeldet
     let tipp = null;          // hervorgehobene Kolonne (Hinweis)
     let bekannt = [];         // zuletzt gefundener Lösungsweg { zuege, weg }
     let hinweisText = '';
@@ -171,7 +173,7 @@ export default {
     }
 
     function zeichneFest() {
-      const fest = !anim && L.festgefahren(z);
+      const fest = !takt && L.festgefahren(z);
       festEl.hidden = !fest;
       if (!fest) return;
       festEl.replaceChildren(h('div', { class: 'ba-fest-karte' },
@@ -193,51 +195,52 @@ export default {
       baue();
       zeichneInfo();
       zeichneKolonnen();
-      if (anim) {
-        zeichneBild(anim.view.rest, anim.weg);
-        zeichnePlaetze(anim.view.plaetze, false);
-      } else {
-        zeichneBild(z.rest, null, L.gewonnen(z));
-        zeichnePlaetze(z.plaetze, true);
-      }
+      zeichneBild(z.rest, weg, !takt && L.gewonnen(z));
+      zeichnePlaetze(z.plaetze, true);
       zeichneFest();
     }
 
-    // ---------- Animation ----------
-    function starteAnimation(vorher, r, k, gewinn) {
-      const plaetze = vorher.plaetze.map((sm) => (sm ? sm.slice() : null));
-      const [f, n] = vorher.kolonnen[k][vorher.pos[k]];
-      plaetze[r.platz] = [f, n, n];
-      anim = { view: { rest: vorher.rest.slice(), plaetze }, runden: r.runden, schritt: 0, timer: 0, gewinn, weg: null };
-      zeichne();
-      anim.timer = setTimeout(schritt, SCHRITT_MS);
-    }
-
-    function schritt() {
-      if (!anim) return;
-      const runde = anim.runden[anim.schritt++];
-      if (!runde) { beendeAnimation(); return; }
-      const { view } = anim;
-      anim.weg = new Set();
-      for (const [p, i] of runde) {
-        view.rest[i] = -1;
-        anim.weg.add(i);
-        if (view.plaetze[p]) view.plaetze[p][2]--;
+    // ---------- Arbeitsrunden (Echtzeit) ----------
+    // Die Sammler arbeiten Runde für Runde; jederzeit kann ein weiterer Sammler dazukommen und
+    // arbeitet dann gleichzeitig mit. Bei reduzierter Bewegung wird alles sofort ausgeführt.
+    function arbeite() {
+      if (!z || takt || zerstoert) return;
+      if (ctx.bewegungReduziert()) {
+        z = L.ruhig(z);
+        weg = null;
+        inRuhe();
+        return;
       }
-      for (let p = 0; p < view.plaetze.length; p++) if (view.plaetze[p] && view.plaetze[p][2] <= 0) view.plaetze[p] = null;
-      zeichne();
-      anim.timer = setTimeout(schritt, SCHRITT_MS);
+      if (!L.arbeitet(z)) { inRuhe(); return; }
+      takt = setTimeout(tick, SCHRITT_MS);
     }
 
-    /** Animation sofort beenden; ein gewonnenes Level wird dabei gemeldet */
-    function beendeAnimation({ melden = true } = {}) {
-      if (!anim) return;
-      clearTimeout(anim.timer);
-      const gewinn = anim.gewinn;
-      anim = null;
-      if (zerstoert) { if (gewinn && melden) meldeGewinn(); return; }
+    function tick() {
+      takt = 0;
+      if (!z || zerstoert) return;
+      const r = L.runde(z);
+      if (!r) { weg = null; inRuhe(); return; }
+      z = r.zustand;
+      weg = new Set(r.runde.map(([, i]) => i));
       zeichne();
-      if (gewinn && melden) meldeGewinn();
+      takt = setTimeout(tick, SCHRITT_MS);
+    }
+
+    /** Alles ruhig: speichern, ggf. Gewinn melden */
+    function inRuhe() {
+      zeichne();
+      ctx.meldeAenderung();
+      if (L.gewonnen(z) && !gemeldet) {
+        gemeldet = true;
+        merkeGeloest();
+        meldeGewinn();
+      }
+    }
+
+    function stoppe() {
+      clearTimeout(takt);
+      takt = 0;
+      weg = null;
     }
 
     function meldeGewinn() {
@@ -253,33 +256,29 @@ export default {
     }
 
     // ---------- Aktionen ----------
-    function fuehreAus(vorher, r, k) {
-      z = r.zustand;
+    /** Neuen Zustand nach einem Einsatz übernehmen und die Arbeit (weiter)laufen lassen */
+    function uebernimm(neu) {
+      z = neu;
       tipp = null;
       hinweisText = '';
-      const gewinn = L.gewonnen(z);
-      if (gewinn) merkeGeloest();
+      zeichne();
       ctx.meldeAenderung();
-      if (ctx.bewegungReduziert() || !r.runden.length) {
-        zeichne();
-        if (gewinn) meldeGewinn();
-      } else {
-        starteAnimation(vorher, r, k, gewinn);
-      }
+      arbeite();
     }
 
     function tippeKolonne(k) {
       if (!z || L.gewonnen(z)) return;
-      beendeAnimation();
-      if (L.gewonnen(z)) return;
       if (z.pos[k] >= z.kolonnen[k].length) return;
+      // Auch während andere Sammler noch arbeiten: der neue steigt sofort mit ein
       if (!z.plaetze.includes(null)) { ctx.meldung('Alle Arbeitsplätze sind belegt.'); return; }
-      const r = L.tippe(z, k);
-      if (r) fuehreAus(z, r, k);
+      const r = L.setze(z, k);
+      if (r) uebernimm(r.zustand);
     }
 
     async function erzeuge(stufe) {
       const nr = ++erzeugung;
+      stoppe();
+      gemeldet = false;
       z = null;
       tipp = null;
       bekannt = [];
@@ -296,35 +295,28 @@ export default {
 
     // ---------- Schnittstelle ----------
     const instanz = {
-      getStand: () => (z ? L.zumSpeichern(z) : null),
+      // Gespeichert wird immer der ruhige Stand (laufende Arbeiten zu Ende gerechnet)
+      getStand: () => (z ? L.zumSpeichern(L.ruhig(z)) : null),
       zusammenfassung: () => (z ? `${L.STUFEN[z.stufe].name} · Level ${z.level} · noch ${L.restPixel(z)} Pixel` : ''),
       kannRueckgaengig: () => Boolean(z) && L.kannRueckgaengig(z),
       kannWiederholen: () => Boolean(z) && L.kannWiederholen(z),
       rueckgaengig() {
-        if (!z) return;
-        if (anim?.gewinn) { beendeAnimation(); return; }
-        beendeAnimation();
+        if (!z || gemeldet) return;
         const v = L.rueckgaengig(z);
         if (!v) return;
-        z = v;
-        tipp = null;
-        hinweisText = '';
-        zeichne();
-        ctx.meldeAenderung();
+        stoppe();
+        uebernimm(v);          // der Stand davor kann noch laufende Arbeit enthalten
       },
       wiederholen() {
-        if (!z) return;
-        if (anim?.gewinn) { beendeAnimation(); return; }
-        beendeAnimation();
-        const k = z.vor[z.vor.length - 1];
-        const r = L.wiederholen(z);
-        if (r) fuehreAus(z, r, k);
+        if (!z || gemeldet) return;
+        const r = L.setzeWieder(z);
+        if (r) uebernimm(r.zustand);
       },
       hinweis() {
         if (!z) return;
-        beendeAnimation();
         if (L.gewonnen(z)) return;
-        const hw = L.hinweis(z, { bekannt });
+        // Der Löser rechnet mit dem ruhigen Stand (laufende Arbeiten zu Ende gedacht)
+        const hw = L.hinweis(L.ruhig(z), { bekannt });
         if (hw.typ === 'zug' || hw.typ === 'unsicher') {
           if (hw.weg) bekannt = [{ zuege: hw.zuege, weg: hw.weg }];
           tipp = hw.kolonne;
@@ -341,7 +333,8 @@ export default {
       },
       neustart() {
         if (!z) return;
-        beendeAnimation({ melden: false });
+        stoppe();
+        gemeldet = false;
         z = L.neustart(z);
         tipp = null;
         hinweisText = '';
@@ -349,7 +342,7 @@ export default {
         ctx.meldeAenderung();
       },
       neu(variante) {
-        beendeAnimation({ melden: false });
+        stoppe();
         return erzeuge(variante ?? z?.stufe ?? ctx.variante);
       },
       onTaste(e) {
@@ -377,7 +370,7 @@ export default {
       },
       zerstoere() {
         zerstoert = true;
-        beendeAnimation();
+        stoppe();
         abmelden();
         container.replaceChildren();
       },

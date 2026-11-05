@@ -51,20 +51,72 @@ export function freiesPixel(rest, b, h, f) {
  */
 export function laufe(rest, b, h, plaetze, runden) {
   for (let schutz = rest.length + 1; schutz > 0; schutz--) {
-    const runde = [];
-    for (let p = 0; p < plaetze.length; p++) {
-      const s = plaetze[p];
-      if (!s) continue;
-      const i = freiesPixel(rest, b, h, s[0]);
-      if (i < 0) continue;
-      rest[i] = -1;
-      s[2]--;
-      runde.push([p, i]);
-      if (s[2] <= 0) plaetze[p] = null;
-    }
+    const runde = eineRunde(rest, b, h, plaetze);
     if (!runde.length) return;
     runden?.push(runde);
   }
+}
+
+/** Eine Arbeitsrunde: Platz 1, 2, … holt je ein freies Pixel seiner Farbe (verändert rest/plaetze) → [[platz, pixel], …] */
+function eineRunde(rest, b, h, plaetze) {
+  const runde = [];
+  for (let p = 0; p < plaetze.length; p++) {
+    const s = plaetze[p];
+    if (!s) continue;
+    const i = freiesPixel(rest, b, h, s[0]);
+    if (i < 0) continue;
+    rest[i] = -1;
+    s[2]--;
+    runde.push([p, i]);
+    if (s[2] <= 0) plaetze[p] = null;
+  }
+  return runde;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Echtzeit-Spiel: Sammler werden eingesetzt und arbeiten Runde für Runde – ein weiterer Sammler
+// kann jederzeit dazukommen und arbeitet dann gleichzeitig mit. Der Verlauf bleibt kompatibel:
+// je Einsatz { k, pl: Plätze direkt davor, px: alle seitdem abgetragenen Pixel }.
+
+/** Vordersten Sammler von Kolonne k auf den ersten freien Platz setzen (ohne zu arbeiten) → { zustand, platz } oder null */
+export function setze(z, k, { vor = [] } = {}) {
+  if (!kannTippen(z, k)) return null;
+  const pos = z.pos.slice();
+  const plaetze = z.plaetze.map((s) => (s ? s.slice() : null));
+  const [f, n] = z.kolonnen[k][pos[k]];
+  pos[k]++;
+  const platz = plaetze.indexOf(null);
+  plaetze[platz] = [f, n, n];
+  const eintrag = { k, px: [], pl: z.plaetze.map((s) => (s ? s.slice() : null)) };
+  return { zustand: { ...z, pos, plaetze, verlauf: [...z.verlauf, eintrag], vor }, platz };
+}
+
+/** Zurückgenommenen Einsatz wiederholen (Echtzeit) → { zustand, platz } oder null */
+export function setzeWieder(z) {
+  if (!z.vor.length) return null;
+  return setze(z, z.vor[z.vor.length - 1], { vor: z.vor.slice(0, -1) });
+}
+
+/** Eine Arbeitsrunde ausführen → { zustand, runde } oder null, wenn gerade niemand etwas holen kann */
+export function runde(z) {
+  const rest = z.rest.slice();
+  const plaetze = z.plaetze.map((s) => (s ? s.slice() : null));
+  const r = eineRunde(rest, z.b, z.h, plaetze);
+  if (!r.length) return null;
+  const verlauf = z.verlauf.slice();
+  const letzter = verlauf.length - 1;
+  if (letzter >= 0) verlauf[letzter] = { ...verlauf[letzter], px: [...verlauf[letzter].px, ...r.map(([, i]) => i)] };
+  return { zustand: { ...z, rest, plaetze, verlauf }, runde: r };
+}
+
+/** Kann gerade mindestens ein Sammler etwas holen? */
+export const arbeitet = (z) => z.plaetze.some((s) => s && freiesPixel(z.rest, z.b, z.h, s[0]) >= 0);
+
+/** Alle laufenden Arbeiten zu Ende führen → ruhiger Zustand */
+export function ruhig(z) {
+  let r;
+  for (let schutz = z.rest.length + 1; schutz > 0 && (r = runde(z)); schutz--) z = r.zustand;
+  return z;
 }
 
 /** Kann der vorderste Sammler von Kolonne k losgeschickt werden? */
