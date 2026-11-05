@@ -95,6 +95,11 @@ a.kachel:hover { border-color: var(--akzent); transform: translateY(-1px); }
 @media (max-width: 560px) {
   .variante-knopf { max-width: 34vw; padding: 0 var(--a1) 0 var(--a2); }
 }
+/* Sehr schmal: lieber den Stufen-Knopf ganz zeigen als den Spielnamen auf „B.“ kürzen */
+@media (max-width: 440px) {
+  .kopfleiste:has(.variante-knopf:not([hidden])) .spiel-titel { display: none; }
+  .variante-knopf { max-width: 48vw; }
+}
 
 /* ---------- Spielansicht ---------- */
 .spiel { flex: 1; display: flex; flex-direction: column; min-height: 0; }

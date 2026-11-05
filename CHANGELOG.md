@@ -1,5 +1,9 @@
 # Änderungen
 
+## 1.3.0 – 05.11.2026
+- Neues Spiel **Bild abtragen**: farbige Sammler tragen ein Pixelbild Farbe für Farbe ab – Arbeitsplätze sind knapp, also gut überlegen, wen man losschickt. Leicht/Mittel/Schwer, 17 eigene Motive + endlose Mosaike, Hinweis, unbegrenztes Rückgängig, kein Spielende („Festgefahren“ → Rückgängig)
+- Am Handy zeigt die Kopfleiste bei wenig Platz den Stufen-Knopf statt eines abgeschnittenen Spielnamens
+
 ## 1.2.0 – 05.11.2026
 - Schwierigkeit (bzw. Modus/Rätselart/Größe) jederzeit wählbar: Knopf neben dem Spielnamen zeigt die aktuelle Stufe, Klick öffnet die Auswahl
 - Beim ersten Öffnen eines Spiels erscheint die Auswahl gleich zu Beginn

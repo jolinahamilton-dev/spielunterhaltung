@@ -40,6 +40,11 @@ export const SPIELE = [
     laden: () => import('./nonogramm/index.js'),
   },
   {
+    id: 'bild-abtragen', name: 'Bild abtragen', symbol: SPIEL_SYMBOLE['bild-abtragen'],
+    beschreibung: 'Farbige Sammler tragen ein Pixelbild Stück für Stück ab.',
+    laden: () => import('./bild-abtragen/index.js'),
+  },
+  {
     id: 'test-raster', name: 'Lichter (Test)', symbol: SPIEL_SYMBOLE.test, entwicklung: true,
     beschreibung: 'Prüfspiel für das Grundgerüst: alle Felder ausschalten.',
     laden: () => import('./test-raster/index.js'),

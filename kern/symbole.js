@@ -50,6 +50,13 @@ export const SPIEL_SYMBOLE = Object.freeze({
     <rect x="21" y="28" width="7.5" height="7.5" rx="1.2"/><rect x="30" y="28" width="7.5" height="7.5" rx="1.2"/><rect x="39" y="28" width="7.5" height="7.5" rx="1.2"/>
     <rect x="30" y="37" width="7.5" height="7.5" rx="1.2"/></g>
     <rect x="12" y="19" width="34.5" height="25.5" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".5"/>`),
+  'bild-abtragen': kachel(`
+    <g fill="var(--spielfarbe-0)"><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="20" y="4" width="6" height="6" rx="1"/><rect x="8" y="10" width="6" height="6" rx="1"/><rect x="14" y="10" width="6" height="6" rx="1"/></g>
+    <g fill="var(--spielfarbe-3)"><rect x="26" y="10" width="6" height="6" rx="1"/><rect x="32" y="16" width="6" height="6" rx="1"/><rect x="26" y="16" width="6" height="6" rx="1"/></g>
+    <g fill="var(--spielfarbe-2)"><rect x="8" y="16" width="6" height="6" rx="1"/><rect x="14" y="16" width="6" height="6" rx="1"/><rect x="20" y="16" width="6" height="6" rx="1"/></g>
+    <g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".45"><rect x="20" y="10" width="6" height="6" rx="1"/><rect x="32" y="10" width="6" height="6" rx="1"/></g>
+    <rect x="6" y="32" width="10" height="10" rx="2.5" fill="var(--spielfarbe-0)"/><rect x="19" y="32" width="10" height="10" rx="2.5" fill="var(--spielfarbe-3)"/><rect x="32" y="32" width="10" height="10" rx="2.5" fill="var(--spielfarbe-2)"/>
+    <path d="M24 30v-4M11 30v-4M37 30v-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".55"/>`),
   test: kachel(`
     <g fill="var(--akzent)"><rect x="6" y="6" width="10" height="10" rx="2"/><rect x="32" y="6" width="10" height="10" rx="2"/><rect x="19" y="19" width="10" height="10" rx="2"/><rect x="6" y="32" width="10" height="10" rx="2"/></g>
     <g fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"><rect x="19" y="6" width="10" height="10" rx="2"/><rect x="6" y="19" width="10" height="10" rx="2"/><rect x="32" y="19" width="10" height="10" rx="2"/><rect x="19" y="32" width="10" height="10" rx="2"/><rect x="32" y="32" width="10" height="10" rx="2"/></g>`),
