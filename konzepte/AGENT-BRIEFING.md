@@ -68,5 +68,15 @@ Jeder Lauf startet mit leerem Speicher. Mit `-Js` kannst du Klicks/Tasten/Pointe
 Ausgabezeilen `KONSOLE-ERROR`/`HAUPTPROZESS-FEHLER` sind Fehler, die du beheben musst. Prüfe: PC hell, Handy dunkel, Symbole an (`localStorage.setItem('spielunterhaltung:v1:einstellungen', JSON.stringify({muster:true}))` + Neuladen), Gewinnen (z. B. per Hinweis-Schleife oder Löser), Rückgängig, Neu-Dialog (Taste N), Spielstand nach Neuladen wieder da.
 Das Browser-Fenster der Hauptsitzung bitte **nicht** benutzen.
 
+## Nachträge (gelten vorrangig)
+- **Konzept zuerst:** Schreibe dein Konzept (Regeln, Stufen, Generator/Lösbarkeit, Bedienung, Datenmodell, Tests) kurz nach `konzepte/<id>.md`, dann baue es.
+- **Stufen-Auswahl:** Die Shell zeigt neben dem Spielnamen einen Knopf mit der aktuellen Variante und beim **ersten Öffnen** eines Spiels einen Auswahl-Dialog. Optional `variantenTitel` im Modul (Standard „Schwierigkeit“). Variantennamen: Kurzname vor „ – “ erscheint auf dem Knopf (z. B. `'Mittel – 12 × 12, diagonal'`).
+  In Testläufen (leerer Speicher) zuerst den Dialog schließen: `-Warte "document.querySelector('dialog[open]')"` und per `-Js` `document.querySelector('dialog[open] .dialog-fuss .knopf').click()` (= Standard) oder einen Eintrag aus `dialog[open] .auswahl-liste button` anklicken.
+- **CSP streng:** keine Inline-Skripte, kein `eval`, **keine `style`-Attribute als Text** (nur `el.style.xyz = …` bzw. `h(..., { style: { … } })`), `fetch` nur auf eigene Dateien (`new URL('./daten.json', import.meta.url)`).
+- **Screenshots** im unsichtbaren Fenster sind manchmal veraltet: Animationen per Einstellung aus (`localStorage.setItem('spielunterhaltung:v1:einstellungen', JSON.stringify({animationen:'aus'}))` + Neuladen über Hash-Wechsel) und vor dem Bild warten.
+- **Robustheit:** Nach deinen Tests auch `tests/einzel.html?datei=kern/robustheit.test.js` laufen lassen (`-Zeit 300000`) – dein Spiel muss kaputte Spielstände ohne Fehler überstehen.
+- **Eigenständig:** eigene Namen, Texte, Grafiken; keine Nachbildung bestimmter Markenspiele.
+- Vorbild für jüngere Spiele: `spiele/bild-abtragen/`, `spiele/block-puzzle/`.
+
 ## Abschlussbericht (deine letzte Antwort, max. ~25 Zeilen)
 Angelegte Dateien · was umgesetzt ist · was bewusst weggelassen/vereinfacht wurde · Testergebnis (Anzahl) · Screenshots geprüft (welche) · bekannte Probleme · **gewünschte Änderungen außerhalb deines Ordners** (konkret, mit Datei).

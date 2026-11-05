@@ -39,11 +39,17 @@ export async function zeigeSpiel(wurzel, eintrag, app) {
   const kVor = knopf(ICONS.wiederholen, 'Wiederholen', 'Strg+Y', () => wiederholen());
   const kHinweis = knopf(ICONS.hinweis, 'Hinweis', 'H', () => hinweis());
   const kNeu = knopf(ICONS.neu, 'Neues Spiel', 'N', () => neuDialog());
+  // Schwierigkeit/Modus: immer sichtbar, zeigt die aktuelle Stufe, Klick öffnet die Auswahl
+  const kVariante = h('button', {
+    type: 'button', class: 'knopf klein variante-knopf', hidden: true,
+    on: { click: () => varianteWechseln() },
+  });
 
   wurzel.replaceChildren(
     h('header', { class: 'kopfleiste' },
       h('a', { class: 'knopf symbol-knopf', href: '#/', title: 'Zur Übersicht', 'aria-label': 'Zur Übersicht' }, symbol(ICONS.zurueck)),
       titel,
+      kVariante,
       h('div', { class: 'kopf-knoepfe' }, kNeu, kRueck, kVor, kHinweis),
     ),
     h('main', { class: 'spiel' }, band, h('div', { class: 'spielbereich' }, flaeche, warten, gewonnen)),
@@ -56,7 +62,7 @@ export async function zeigeSpiel(wurzel, eintrag, app) {
   } catch (f) {
     console.error(f);
     flaeche.replaceChildren(h('p', { class: 'fehler-text', text: 'Das Spiel konnte nicht geladen werden.' }));
-    [kNeu, kRueck, kVor, kHinweis].forEach((k) => { k.hidden = true; });
+    [kNeu, kRueck, kVor, kHinweis, kVariante].forEach((k) => { k.hidden = true; });
     return { fokus: titel, verlasse() { ac.abort(); } };
   }
   if (signal.aborted) return { fokus: titel, verlasse() {} };
@@ -66,10 +72,31 @@ export async function zeigeSpiel(wurzel, eintrag, app) {
   if (migrationsHinweis) app.meldung(migrationsHinweis);
 
   const varianten = modul.varianten || [];
+  const variantenTitel = modul.variantenTitel || 'Schwierigkeit';
   const standardVariante = () => {
     const letzte = spielSpeicher.lies('letzteVariante');
     return varianten.some((v) => v.id === letzte) ? letzte : varianten[0]?.id ?? null;
   };
+  // Kurzname für den Knopf: „Klassisch – endet, wenn …“ → „Klassisch“
+  const kurzName = (id) => (varianten.find((v) => v.id === id)?.name || '').split(' – ')[0];
+
+  /** Auswahl-Dialog → gewählte Varianten-ID oder null (abgebrochen) */
+  async function waehleVariante({ ersterStart = false, aktuell = null } = {}) {
+    const wahl = await zeigeDialog({
+      titel: ersterStart ? `${eintrag.name}: ${variantenTitel} wählen` : `${variantenTitel} wählen`,
+      inhalt: [
+        ersterStart ? h('p', { class: 'leise', text: 'Du kannst sie jederzeit oben über den Knopf neben dem Titel ändern.' }) : null,
+        h('div', { class: 'auswahl-liste' }, varianten.map((v) => h('button', {
+          type: 'button',
+          class: `knopf breit${v.id === aktuell ? ' aktiv' : ''}`,
+          'aria-current': v.id === aktuell ? 'true' : null,
+          on: { click: (e) => schliesseMit(e.currentTarget, v.id) },
+        }, v.name, v.id === aktuell ? h('span', { class: 'leise auswahl-aktuell', text: 'aktuell' }) : null))),
+      ],
+      knoepfe: [{ text: ersterStart ? 'Standard nehmen' : 'Abbrechen', wert: null }],
+    });
+    return varianten.some((v) => v.id === wahl) ? wahl : null;
+  }
 
   // Ein gelöstes Spiel wird nicht wieder geöffnet – dann gleich ein neues
   const fortsetzen = huelle && !huelle.geloest ? huelle : null;
@@ -179,6 +206,22 @@ export async function zeigeSpiel(wurzel, eintrag, app) {
     kVor.disabled = zustand.geloest || (instanz.kannWiederholen ? !instanz.kannWiederholen() : false);
     kHinweis.hidden = typeof instanz.hinweis !== 'function';
     kHinweis.disabled = zustand.geloest;
+    aktualisiereVariante();
+  }
+
+  function aktualisiereVariante() {
+    kVariante.hidden = varianten.length < 2;
+    if (kVariante.hidden) return;
+    const name = kurzName(zustand.variante) || variantenTitel;
+    kVariante.replaceChildren(h('span', { class: 'variante-text', text: name }), symbol(ICONS.auswahl, 'symbol variante-pfeil'));
+    kVariante.setAttribute('aria-label', `${variantenTitel}: ${name} – ändern`);
+    kVariante.title = `${variantenTitel} ändern`;
+  }
+
+  async function varianteWechseln() {
+    const wahl = await waehleVariante({ aktuell: zustand.variante });
+    if (!wahl || signal.aborted) return;
+    starteNeu(wahl);
   }
 
   function rueckgaengig() {
@@ -295,6 +338,14 @@ export async function zeigeSpiel(wurzel, eintrag, app) {
   window.addEventListener('pagehide', speichereJetzt, { signal });
 
   // ---------- Start ----------
+  // Erstes Mal in diesem Spiel: Schwierigkeit gleich wählen lassen (danach gilt die zuletzt gewählte)
+  if (!fortsetzen && varianten.length > 1 && spielSpeicher.lies('letzteVariante') === null) {
+    aktualisiereVariante();
+    const wahl = await waehleVariante({ ersterStart: true, aktuell: zustand.variante });
+    if (signal.aborted) return { fokus: titel, verlasse() {} };
+    zustand.variante = wahl ?? zustand.variante;
+    spielSpeicher.schreibe('letzteVariante', zustand.variante);
+  }
   try {
     erstelle(fortsetzen?.stand ?? null);
   } catch (f) {

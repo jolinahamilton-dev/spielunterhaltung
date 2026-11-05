@@ -1,0 +1,294 @@
+[
+  {
+    "titel": "Kirsche",
+    "zeilen": [
+      "......bgg.",
+      ".....bb.gg",
+      "....b..b..",
+      "...b...b..",
+      "..b....rr.",
+      ".rr...rrrr",
+      "rrrr..rrrr",
+      "rrrr...rr.",
+      ".rr......."
+    ],
+    "farben": { "r": 0, "b": 8, "g": 3 }
+  },
+  {
+    "titel": "Pilz",
+    "zeilen": [
+      "...rrr...",
+      ".rrwrrrr.",
+      "rrwwrrwrr",
+      "rrrrrrwwr",
+      "rwrrrrrrr",
+      ".rrrrrrr.",
+      "...sss...",
+      "...sss...",
+      "..sssss.."
+    ],
+    "farben": { "r": 0, "w": 2, "s": 8 }
+  },
+  {
+    "titel": "Herz",
+    "zeilen": [
+      ".rr...rr.",
+      "rppr.rppr",
+      "rwpprpppr",
+      "rpppppppr",
+      ".rpppppr.",
+      "..rpppr..",
+      "...rpr...",
+      "....r...."
+    ],
+    "farben": { "r": 0, "p": 7, "w": 2 }
+  },
+  {
+    "titel": "Apfel",
+    "zeilen": [
+      "....s....",
+      "....saa..",
+      ".aaasaaa.",
+      "aaaaaaaaa",
+      "ahaaaaaaa",
+      "ahaaaaaaa",
+      "aaaaaaaaa",
+      "aaaaaaaaa",
+      ".aaaaaaa.",
+      "..aa.aa.."
+    ],
+    "farben": { "a": 3, "s": 8, "h": 2 }
+  },
+  {
+    "titel": "Fisch",
+    "zeilen": [
+      "..fff.....",
+      ".oooooo..f",
+      "oeooooooff",
+      "ooooooooff",
+      "oooooooo.f",
+      ".oooooo...",
+      "...ff....."
+    ],
+    "farben": { "o": 1, "f": 5, "e": 9 }
+  },
+  {
+    "titel": "Sonne",
+    "zeilen": [
+      "r...r...r",
+      ".r.ooo.r.",
+      "..ogggo..",
+      ".ogggggo.",
+      "rogggggor",
+      ".ogggggo.",
+      "..ogggo..",
+      ".r.ooo.r.",
+      "r...r...r"
+    ],
+    "farben": { "r": 0, "o": 1, "g": 2 }
+  },
+  {
+    "titel": "Tasse",
+    "zeilen": [
+      "..d.d.....",
+      "...d.d....",
+      "ckkkkkkc..",
+      "ccccccccc.",
+      "cccccccc.c",
+      "cccccccc.c",
+      ".cccccccc.",
+      "..cccccc.."
+    ],
+    "farben": { "c": 5, "k": 8, "d": 9 }
+  },
+  {
+    "titel": "Blume",
+    "zeilen": [
+      "....pppp....",
+      "..pppppppp..",
+      ".pppppppppp.",
+      ".pppyyyyppp.",
+      ".ppyyyyyypp.",
+      ".pppyyyyppp.",
+      "..pppppppp..",
+      "....pppp....",
+      ".....gg.....",
+      ".ll..gg..ll.",
+      "..llggggll..",
+      "....gggg...."
+    ],
+    "farben": { "p": 7, "y": 2, "g": 3, "l": 4 }
+  },
+  {
+    "titel": "Haus",
+    "zeilen": [
+      ".....dd.....",
+      "....dddd....",
+      "...dddddd...",
+      "..dddddddd..",
+      ".dddddddddd.",
+      "dddddddddddd",
+      ".wwwwwwwwww.",
+      ".wffwwwwffw.",
+      ".wffwttwffw.",
+      ".wwwwttwwww.",
+      ".wwwwttwwww.",
+      "gggggggggggg"
+    ],
+    "farben": { "d": 0, "w": 2, "t": 8, "f": 5, "g": 3 }
+  },
+  {
+    "titel": "Baum",
+    "zeilen": [
+      "....gggg....",
+      "..gggggggg..",
+      ".ggaggggggd.",
+      "gggggggaggdd",
+      "ggggaggggddd",
+      "gggggggggdgd",
+      ".ggaggggddd.",
+      "..ggggdddd..",
+      ".....ss.....",
+      ".....ss.....",
+      ".....ss.....",
+      "...ssssss..."
+    ],
+    "farben": { "g": 3, "d": 4, "s": 8, "a": 0 }
+  },
+  {
+    "titel": "Boot",
+    "zeilen": [
+      ".....mff....",
+      ".....mf.....",
+      "....smss....",
+      "...ssmsss...",
+      "..sssmssss..",
+      ".ssssmsssss.",
+      ".....m......",
+      "mmmmmmmmmmmm",
+      ".mmmmmmmmmm.",
+      "wwwwwwwwwwww"
+    ],
+    "farben": { "s": 2, "m": 8, "f": 0, "w": 5 }
+  },
+  {
+    "titel": "Kaktus",
+    "zeilen": [
+      ".....bb.....",
+      "....gggg....",
+      "....gdgg....",
+      ".gg.gdgg.gg.",
+      ".gd.gdgg.dg.",
+      ".ggggdggggg.",
+      "....gdgg....",
+      "....gdgg....",
+      "..tttttttt..",
+      "...tttttt...",
+      "...tttttt...",
+      "....tttt...."
+    ],
+    "farben": { "g": 3, "d": 4, "t": 1, "b": 7 }
+  },
+  {
+    "titel": "Regenschirm",
+    "zeilen": [
+      ".r...pp...r.",
+      "...vvppvv...",
+      "..vvvppvvv..",
+      ".vvvvppvvvv.",
+      "vvvvvppvvvvv",
+      ".r....h...r.",
+      "......h.....",
+      "...r..h..r..",
+      "......h.....",
+      "......h.....",
+      "....h.h.....",
+      ".....h......"
+    ],
+    "farben": { "r": 5, "v": 6, "p": 7, "h": 8 }
+  },
+  {
+    "titel": "Schmetterling",
+    "zeilen": [
+      ".....k...k.....",
+      "......k.k......",
+      ".vvv...k...vvv.",
+      "vvvvv..k..vvvvv",
+      "vyyvvv.k.vvvyyv",
+      "vyyvvvbkbvvvyyv",
+      "vvvvvbbkbbvvvvv",
+      ".vvvbbbkbbbvvv.",
+      "..pppbbkbbppp..",
+      ".ppyppbkbppypp.",
+      ".pppppbkbppppp.",
+      "..ppp.....ppp.."
+    ],
+    "farben": { "k": 9, "v": 6, "y": 2, "b": 5, "p": 7 }
+  },
+  {
+    "titel": "Rakete",
+    "zeilen": [
+      ".....nn.....",
+      "....nnnn....",
+      "...nnnnnn...",
+      "...ssssss...",
+      "..ssssssss..",
+      "..ssswwsss..",
+      "..sswwwwss..",
+      "..sswwwwss..",
+      "..ssswwsss..",
+      "..ssssssss..",
+      ".nssssssssn.",
+      "nnssssssssnn",
+      "nn.ssssss.nn",
+      "....oooo....",
+      "....oggo....",
+      ".....gg....."
+    ],
+    "farben": { "n": 0, "s": 9, "w": 5, "o": 1, "g": 2 }
+  },
+  {
+    "titel": "Eis",
+    "zeilen": [
+      "......r.....",
+      ".....rr.....",
+      "....pppp....",
+      "..ppyppppp..",
+      ".pppppyppyp.",
+      ".pypppppppp.",
+      "mmmmmmmmmmmm",
+      "mmmmmmmmmmmm",
+      ".mmmmmmmmmm.",
+      ".clcclcclcc.",
+      "..cclcclcc..",
+      "...clcclc...",
+      "...ccclcc...",
+      "....clcc....",
+      ".....cc.....",
+      ".....c......"
+    ],
+    "farben": { "r": 0, "p": 7, "y": 2, "m": 3, "c": 8, "l": 1 }
+  },
+  {
+    "titel": "Leuchtturm",
+    "zeilen": [
+      ".....bb.....",
+      "....bbbb....",
+      "...gggggg...",
+      "....ssss....",
+      "...ssssss...",
+      "....rrrr....",
+      "....rrrr....",
+      "....ssss....",
+      "...ssssss...",
+      "...rrrrrr...",
+      "...rrrrrr...",
+      "...ssssss...",
+      "..ssssssss..",
+      "..kkkkkkkk..",
+      "tkkkkkkkkkkt",
+      "tttttttttttt"
+    ],
+    "farben": { "b": 5, "g": 2, "s": 9, "r": 0, "k": 8, "t": 4 }
+  }
+]

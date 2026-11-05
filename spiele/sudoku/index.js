@@ -35,6 +35,9 @@ export default {
     let vorratTimer = 0;
     let vorratLaeuft = false;
     let autoNotizen = optionen.wert('autoNotizen', false) === true;
+    // Eingabeart: 'ziffer' = erst Ziffer wählen, dann Felder antippen · 'feld' = erst Feld, dann Ziffer
+    let eingabeArt = optionen.wert('eingabeArt', 'ziffer') === 'feld' ? 'feld' : 'ziffer';
+    let aktiveZiffer = 0;              // gewählte Ziffer im Modus „Ziffer zuerst“ (0 = keine)
 
     // ---------- DOM ----------
     const zellen = [], wertEl = [], notizEl = [];
@@ -58,8 +61,13 @@ export default {
 
     const ziffernKnoepfe = Array.from({ length: 9 }, (_, k) => h('button', {
       type: 'button', class: 'sd-ziffer', dataset: { d: k + 1 },
-      on: { click: () => eingabe(k + 1) },
+      on: { click: () => (eingabeArt === 'ziffer' ? waehleZiffer(k + 1) : eingabe(k + 1)) },
     }, h('span', { class: 'sd-ziffer-zahl', text: k + 1 }), h('span', { class: 'sd-ziffer-rest', 'aria-hidden': 'true' })));
+    const artKnopf = h('button', {
+      type: 'button', class: 'knopf klein sd-schalter sd-art',
+      title: 'Eingabe umschalten: erst Ziffer wählen und dann Felder antippen – oder erst Feld, dann Ziffer',
+      on: { click: () => schalteEingabeArt() },
+    });
     const loeschKnopf = h('button', {
       type: 'button', class: 'sd-ziffer sd-loeschen', title: 'Zelle leeren (Entf)', 'aria-label': 'Zelle leeren',
       on: { click: () => loesche() },
@@ -81,7 +89,7 @@ export default {
       h('div', { class: 'sd-seite' },
         h('div', { class: 'sd-kopf' }, stufeEl, offenEl),
         h('div', { class: 'sd-ziffern', role: 'group', 'aria-label': 'Ziffern' }, ziffernKnoepfe, loeschKnopf),
-        h('div', { class: 'sd-aktionen' }, notizKnopf, autoKnopf),
+        h('div', { class: 'sd-aktionen' }, artKnopf, notizKnopf, autoKnopf),
         info,
       ),
     );
@@ -92,13 +100,17 @@ export default {
       signal,
       tippen: (e) => {
         const z = e.startZiel?.closest?.('.sd-zelle');
-        if (z && feld.contains(z)) waehle(Number(z.dataset.i), true);
+        if (!z || !feld.contains(z)) return;
+        if (eingabeArt === 'ziffer') tippeImZiffermodus(Number(z.dataset.i));
+        else waehle(Number(z.dataset.i), true);
       },
-      // Rechtsklick bzw. langes Drücken: Zelle wählen und Notizmodus umschalten
+      // Rechtsklick bzw. langes Drücken: im Modus „Ziffer zuerst“ Notiz der gewählten Ziffer,
+      // sonst Zelle wählen und Notizmodus umschalten
       rechts: (e) => {
         const z = e.target?.closest?.('.sd-zelle');
         if (z && feld.contains(z)) waehle(Number(z.dataset.i), true);
-        schalteNotizmodus();
+        if (eingabeArt === 'ziffer' && aktiveZiffer) eingabe(aktiveZiffer, true);
+        else schalteNotizmodus();
       },
     });
     feld.addEventListener('focusin', (e) => {
@@ -118,7 +130,9 @@ export default {
       }
       const alle = alleWerte();
       const sel = s.auswahl;
-      const selWert = alle[sel];
+      const zifferModus = eingabeArt === 'ziffer';
+      // Hervorgehoben wird im Modus „Ziffer zuerst“ die gewählte Ziffer, sonst die Ziffer der gewählten Zelle
+      const selWert = zifferModus && aktiveZiffer ? aktiveZiffer : alle[sel];
       const rS = L.zeileVon(sel), cS = L.spalteVon(sel), bS = L.blockVon(sel);
       const konflikt = new Set(ctx.einstellungen.wert('fehlerMarkieren') ? L.konflikte(alle) : []);
       const bezug = new Set(hinweis?.zellen ?? []);
@@ -130,9 +144,10 @@ export default {
         const w = alle[i];
         const fest = Boolean(vorgabe[i]);
         el.classList.toggle('sd-fest', fest);
-        el.classList.toggle('sd-gewaehlt', i === sel);
-        el.classList.toggle('sd-bereich', i !== sel && (L.zeileVon(i) === rS || L.spalteVon(i) === cS || L.blockVon(i) === bS));
-        el.classList.toggle('sd-gleich', i !== sel && Boolean(selWert) && w === selWert);
+        // Im Modus „Ziffer zuerst“ zählt die gewählte Ziffer, nicht die Zelle (Tastatur-Cursor zeigt der Fokusrahmen)
+        el.classList.toggle('sd-gewaehlt', !zifferModus && i === sel);
+        el.classList.toggle('sd-bereich', !zifferModus && i !== sel && (L.zeileVon(i) === rS || L.spalteVon(i) === cS || L.blockVon(i) === bS));
+        el.classList.toggle('sd-gleich', (zifferModus || i !== sel) && Boolean(selWert) && w === selWert);
         el.classList.toggle('sd-konflikt', konflikt.has(i));
         el.classList.toggle('sd-hinweis', hinweis?.i === i);
         el.classList.toggle('sd-bezug', bezug.has(i) && hinweis?.i !== i);
@@ -159,9 +174,14 @@ export default {
         const fertig = rest <= 0;
         k.classList.toggle('sd-erledigt', fertig);
         k.classList.toggle('sd-aktuell', selWert === d);
+        k.classList.toggle('sd-aktiv', zifferModus && aktiveZiffer === d);
         k.lastChild.textContent = fertig ? '✓' : String(rest);
-        k.setAttribute('aria-label', `${s.notizmodus ? 'Notiz' : 'Ziffer'} ${d}, ${fertig ? 'alle gesetzt' : `noch ${rest}`}`);
+        k.setAttribute('aria-label', `${s.notizmodus ? 'Notiz' : 'Ziffer'} ${d}, ${fertig ? 'alle gesetzt' : `noch ${rest}`}${zifferModus && aktiveZiffer === d ? ', gewählt' : ''}`);
+        if (zifferModus) k.setAttribute('aria-pressed', String(aktiveZiffer === d)); else k.removeAttribute('aria-pressed');
       });
+      wurzel.classList.toggle('sd-ziffermodus', zifferModus);
+      artKnopf.textContent = zifferModus ? 'Eingabe: Ziffer zuerst' : 'Eingabe: Feld zuerst';
+      artKnopf.setAttribute('aria-pressed', String(zifferModus));
       wurzel.classList.toggle('sd-notizmodus', s.notizmodus);
       notizKnopf.setAttribute('aria-pressed', String(s.notizmodus));
       notizKnopf.textContent = s.notizmodus ? 'Notizen: an' : 'Notizen: aus';
@@ -248,6 +268,42 @@ export default {
       if (s.werte[i]) leereWert(zug, i);
       else zug.aendere(i, 0, 0);
       abschliessen(zug);
+    }
+
+    // ---------- Modus „Ziffer zuerst“ ----------
+    function waehleZiffer(d) {
+      if (!s || s.geloest) return;
+      aktiveZiffer = aktiveZiffer === d ? 0 : d;
+      zeichne();
+    }
+
+    /** Zelle angetippt, während eine Ziffer gewählt ist: eintragen bzw. (gleiche Ziffer) wieder entfernen */
+    function tippeImZiffermodus(i) {
+      if (!s || s.geloest) return;
+      s.auswahl = i;
+      const w = vorgabe[i] || s.werte[i];
+      // Vorgegebene Zelle oder (ohne gewählte Ziffer) gefüllte Zelle: deren Ziffer wird die gewählte
+      if (vorgabe[i] || (!aktiveZiffer && w)) {
+        aktiveZiffer = w;
+        zeichne();
+        return;
+      }
+      if (!aktiveZiffer) {
+        zeichne();
+        ctx.meldung('Erst unten eine Ziffer wählen, dann die Felder antippen.');
+        return;
+      }
+      eingabe(aktiveZiffer);
+    }
+
+    function schalteEingabeArt() {
+      eingabeArt = eingabeArt === 'ziffer' ? 'feld' : 'ziffer';
+      optionen.setze('eingabeArt', eingabeArt);
+      if (eingabeArt === 'ziffer' && !aktiveZiffer && s) aktiveZiffer = alleWerte()[s.auswahl] || 0;
+      zeichne();
+      ctx.meldung(eingabeArt === 'ziffer'
+        ? 'Erst Ziffer wählen, dann alle passenden Felder antippen.'
+        : 'Erst Feld antippen, dann Ziffer wählen.');
     }
 
     function schalteNotizmodus() {
@@ -468,7 +524,18 @@ export default {
         if (!s || s.geloest || e.ctrlKey || e.metaKey) return false;
         const m = /^(?:Digit|Numpad)([0-9])$/.exec(e.code || '');
         const d = m ? Number(m[1]) : /^[0-9]$/.test(e.key) ? Number(e.key) : -1;
-        if (d >= 1) { eingabe(d, e.shiftKey || e.altKey); return true; }
+        if (d >= 1) {
+          // Tastatur trägt immer direkt in die Cursor-Zelle ein; im Ziffermodus wird die Ziffer zugleich gewählt
+          if (eingabeArt === 'ziffer' && !(e.shiftKey || e.altKey)) aktiveZiffer = d;
+          eingabe(d, e.shiftKey || e.altKey);
+          zeichne();
+          return true;
+        }
+        // Enter: gewählte Ziffer in die Cursor-Zelle (Modus „Ziffer zuerst“)
+        if (e.key === 'Enter' && eingabeArt === 'ziffer' && aktiveZiffer && feld.contains(e.target instanceof Element ? e.target : null)) {
+          tippeImZiffermodus(s.auswahl);
+          return true;
+        }
         if (d === 0 || e.key === 'Delete' || e.key === 'Backspace') { loesche(); return true; }
         if (e.altKey) return false;
         const fremderKnopf = e.target instanceof Element && e.target.closest('button, a') && !feld.contains(e.target);

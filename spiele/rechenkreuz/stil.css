@@ -1,0 +1,153 @@
+/* Rechenkreuz: Raster oben (skaliert mit der Breite), Kärtchen-Vorrat darunter (bricht um). */
+.rk {
+  --rk-platz: min(100vw, 760px) - 32px - var(--rk-spalte-summe, 0px);
+  --rk-zahl: clamp(30px, calc((var(--rk-platz)) / var(--rk-einheiten, 5)), 60px);
+  --rk-op: calc(var(--rk-zahl) * .6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--a4);
+  width: 100%;
+  max-width: 760px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+@media (max-height: 700px) and (min-width: 561px) {
+  .rk { --rk-zahl: clamp(30px, calc((var(--rk-platz)) / var(--rk-einheiten, 5)), 48px); }
+}
+
+.rk-info { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: var(--a1) var(--a4); min-height: 1.8rem; text-align: center; }
+.rk-titel { font-weight: 650; font-size: 1.1rem; }
+.rk-status { font-size: .92rem; font-variant-numeric: tabular-nums; }
+
+/* ---------- Raster ---------- */
+.rk-raster-rahmen { display: flex; justify-content: center; max-width: 100%; }
+.rk-raster {
+  display: grid;
+  gap: 3px;
+  touch-action: manipulation;
+}
+.rk-raster[hidden] { display: none; }
+.rk-reihe { display: contents; }
+.rk-zelle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  border-radius: var(--radius-klein);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.rk-zahl {
+  font: inherit;
+  font-weight: 650;
+  font-size: calc(var(--rk-zahl) * .42);
+  color: var(--text);
+  border: 2px solid transparent;
+  padding: 0;
+  transition: background var(--dauer) ease-out, border-color var(--dauer) ease-out;
+}
+.rk-zahl.vorgabe { background: var(--flaeche-2); }
+.rk-zahl.feld {
+  background: var(--flaeche);
+  border: 2px dashed var(--rand);
+  cursor: pointer;
+  color: var(--akzent);
+}
+.rk-zahl.feld.gefuellt { border-style: solid; border-color: color-mix(in srgb, var(--akzent) 45%, var(--rand)); touch-action: none; }
+.rk-zahl.feld:hover { border-color: var(--akzent); }
+.rk-zahl.feld.waehlbar:not(.gefuellt) { border-color: color-mix(in srgb, var(--akzent) 60%, var(--rand)); }
+.rk-zahl.feld.gewaehlt { border: 3px solid var(--akzent); background: var(--akzent-sanft); }
+.rk-zahl.feld.ziel { border: 3px solid var(--akzent); background: var(--akzent-sanft); }
+.rk-zahl.feld.tippt { color: var(--text-leise); border-style: dotted; border-color: var(--akzent); }
+.rk-zahl.markiert { box-shadow: 0 0 0 3px var(--hg), 0 0 0 5px var(--fokus); }
+.rk-zahl.cursor:focus-visible { outline: 3px solid var(--fokus); outline-offset: 2px; }
+.rk-zahl:focus { outline: none; }
+.rk-zahl:focus-visible { outline: 3px solid var(--fokus); outline-offset: 2px; }
+
+.rk-op { font-size: calc(var(--rk-zahl) * .4); color: var(--text-leise); font-weight: 600; }
+
+/* richtig: ruhiges Grün (Fläche) · falsch: gestrichelter roter Rand (Form, nicht nur Farbe) */
+.rk-zahl.richtig { background: color-mix(in srgb, var(--erfolg) 22%, var(--flaeche)); border-color: transparent; color: var(--text); }
+.rk-zahl.feld.richtig { border-style: solid; border-color: color-mix(in srgb, var(--erfolg) 55%, transparent); }
+.rk-op.richtig { background: color-mix(in srgb, var(--erfolg) 14%, transparent); color: var(--erfolg); }
+.rk-zahl.falsch { background: color-mix(in srgb, var(--fehler-sanft) 70%, var(--flaeche)); }
+.rk-zahl.feld.falsch { border: 2px dashed color-mix(in srgb, var(--fehler) 65%, transparent); color: var(--text); }
+.rk-op.falsch { color: color-mix(in srgb, var(--fehler) 80%, var(--text-leise)); }
+.rk-op { position: relative; }
+.rk-op.haken::after {
+  content: "✓";
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: .6em;
+  line-height: 1;
+}
+
+.rk-laden { margin: var(--a6) 0; }
+
+/* ---------- Vorrat ---------- */
+.rk-vorrat {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--a2);
+  max-width: min(100%, 560px);
+  min-height: 48px;
+}
+.rk-vorrat[hidden] { display: none; }
+.rk-karte {
+  min-width: 46px;
+  height: 46px;
+  padding: 0 var(--a2);
+  border: 1px solid var(--rand);
+  border-radius: var(--radius-klein);
+  background: var(--flaeche);
+  color: var(--text);
+  font: inherit;
+  font-weight: 650;
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--schatten);
+  cursor: grab;
+  touch-action: none;
+  transition: transform var(--dauer) ease-out, background var(--dauer) ease-out;
+}
+.rk-karte:hover { border-color: var(--akzent); }
+.rk-karte.gewaehlt { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); transform: translateY(-3px); }
+.rk-karte.gezogen { opacity: .35; }
+.rk-karte:disabled { cursor: default; opacity: .6; }
+.rk-vorrat-leer { align-self: center; font-size: .92rem; }
+.rk-tipp-text { font-size: .85rem; text-align: center; margin: 0; }
+@media (hover: hover) and (pointer: fine) {
+  .rk-tipp-text::after { content: " Tastatur: Pfeile, Ziffern, Entf."; }
+}
+
+/* gezogenes Kärtchen */
+.rk-geist {
+  position: fixed;
+  left: -100px;
+  top: -100px;
+  z-index: 50;
+  min-width: 46px;
+  height: 46px;
+  padding: 0 var(--a2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-klein);
+  background: var(--akzent);
+  color: var(--akzent-text);
+  font-weight: 700;
+  font-size: 1.15rem;
+  box-shadow: var(--schatten);
+  pointer-events: none;
+  transform: translate(-50%, -110%);
+}
+@media (pointer: fine) { .rk-geist { transform: translate(-50%, -50%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .rk-zahl, .rk-karte { transition: none; }
+  .rk-karte.gewaehlt { transform: none; }
+}
+html[data-bewegung="aus"] .rk-zahl, html[data-bewegung="aus"] .rk-karte { transition: none; }

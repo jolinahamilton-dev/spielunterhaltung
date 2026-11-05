@@ -33,6 +33,7 @@ export default {
   id: 'nonogramm',
   name: 'Nonogramm',
   beschreibung: 'Zahlen am Rand verraten, welche Felder ein Bild ergeben.',
+  variantenTitel: 'Rätselart',
   varianten: [
     { id: 'motive', name: 'Motive – kleine Bilder der Reihe nach' },
     { id: 'z5', name: 'Zufall 5×5' },

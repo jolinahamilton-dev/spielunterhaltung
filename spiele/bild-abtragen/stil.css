@@ -1,0 +1,190 @@
+/* Bild abtragen. Hochformat: Bild oben, Arbeitsplätze darunter, Kolonnen unten.
+   Breites Querformat: Bild links, Plätze und Kolonnen rechts daneben. */
+.ba {
+  --bild: clamp(200px, min(calc(100vw - 32px), calc(100dvh - 440px)), 460px);
+  --platz: clamp(40px, calc((min(100vw, 520px) - 72px) / 6), 54px);
+  --kolonne: clamp(64px, calc((min(100vw, 520px) - 60px) / 4), 84px);
+  display: grid;
+  grid-template-areas: "info" "bild" "plaetze" "kolonnen";
+  justify-items: center;
+  gap: var(--a3);
+  width: 100%;
+  max-width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+@media (min-width: 820px) and (min-aspect-ratio: 5/4) {
+  .ba {
+    --bild: clamp(280px, calc(100dvh - 210px), 560px);
+    --platz: 54px;
+    --kolonne: 84px;
+    grid-template-areas: "info info" "bild plaetze" "bild kolonnen";
+    grid-template-columns: auto auto;
+    grid-template-rows: auto auto 1fr;
+    justify-content: center;
+    align-items: start;
+    column-gap: var(--a6);
+    row-gap: var(--a4);
+  }
+  .ba-plaetze { align-self: end; }
+}
+
+.ba-info { grid-area: info; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: var(--a2) var(--a4); min-height: 1.8rem; }
+.ba-titel { font-weight: 650; font-size: 1.1rem; }
+.ba-rest { font-size: .92rem; font-variant-numeric: tabular-nums; }
+
+/* ---------- Bild ---------- */
+.ba-bild-rahmen {
+  grid-area: bild;
+  position: relative;
+  width: var(--bild);
+  height: var(--bild);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ba-bild {
+  --spalt: 2px;
+  --zelle: calc((var(--bild) - (var(--n) - 1) * var(--spalt)) / var(--n));
+  display: grid;
+  grid-template-columns: repeat(var(--b), var(--zelle));
+  grid-auto-rows: var(--zelle);
+  gap: var(--spalt);
+  transition: transform 250ms ease-out;
+}
+.ba-bild[hidden] { display: none; }
+.ba-px {
+  border-radius: calc(var(--zelle) * .2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: scale(.84);
+  opacity: .9;
+}
+/* frei: erhaben und voll – innen: flacher und etwas kleiner (gleiche Farbe) */
+.ba-px.frei { transform: none; opacity: 1; box-shadow: inset 0 -2px 0 rgb(0 0 0 / .16), inset 0 1px 0 rgb(255 255 255 / .22); }
+.ba-px.leer { background: color-mix(in srgb, var(--rand) 40%, transparent); transform: scale(.4); opacity: 1; }
+.ba-px.luft { transform: none; }
+.ba-px.weg { animation: ba-weg 110ms ease-out forwards; transform: none; opacity: 1; }
+@keyframes ba-weg { to { opacity: .15; transform: scale(.5); } }
+.ba-px-symbol { width: 62%; height: 62%; fill: rgb(0 0 0 / .32); pointer-events: none; }
+
+.ba-bild-rahmen.fertig .ba-bild { transform: scale(.6); }
+.ba-bild-rahmen.fertig .ba-px { animation: einblenden 250ms ease-out; }
+
+.ba-laden { position: absolute; }
+
+/* Festgefahren: ruhiger Hinweis über dem Bild */
+.ba-fest {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--a3);
+  background: color-mix(in srgb, var(--hg) 55%, transparent);
+  border-radius: var(--radius);
+  animation: einblenden var(--dauer) ease-out;
+  z-index: 2;
+}
+.ba-fest[hidden] { display: none; }
+.ba-fest-karte {
+  background: var(--flaeche);
+  border: 1px solid var(--rand);
+  border-radius: var(--radius);
+  box-shadow: var(--schatten);
+  padding: var(--a4) var(--a5);
+  text-align: center;
+  display: grid;
+  gap: var(--a2);
+  max-width: 100%;
+}
+.ba-fest-titel { font-weight: 650; }
+.ba-fest-knoepfe { display: flex; flex-wrap: wrap; gap: var(--a2); justify-content: center; margin-top: var(--a1); }
+
+/* ---------- Sammler ---------- */
+.ba-sammler {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  border-radius: 10px;
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / .15), inset 0 2px 0 rgb(255 255 255 / .2);
+}
+.ba-sammler-symbol { width: 34%; height: 34%; fill: rgb(0 0 0 / .34); flex: none; }
+.ba-zahl {
+  min-width: 1.7em;
+  padding: 0 .3em;
+  border-radius: 999px;
+  background: rgb(255 255 255 / .88);
+  color: #1d232b;
+  font-weight: 700;
+  font-size: .88rem;
+  line-height: 1.35;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.ba-sammler.leer { background: transparent; box-shadow: none; border: 2px dashed var(--rand); }
+
+/* ---------- Arbeitsplätze ---------- */
+.ba-plaetze { grid-area: plaetze; display: flex; flex-wrap: nowrap; gap: var(--a2); justify-content: center; }
+.ba-plaetze[hidden] { display: none; }
+.ba-platz {
+  width: var(--platz);
+  height: var(--platz);
+  border-radius: 12px;
+  display: flex;
+  padding: 3px;
+  background: var(--flaeche-2);
+}
+.ba-platz.leer { background: transparent; border: 2px dashed var(--rand); }
+.ba-platz .ba-sammler { flex: 1; }
+.ba-platz.wartet { background: transparent; outline: 2px dashed var(--text-leise); outline-offset: -2px; }
+.ba-platz.wartet .ba-sammler { opacity: .7; transform: scale(.88); }
+
+/* ---------- Kolonnen ---------- */
+.ba-kolonnen { grid-area: kolonnen; display: flex; gap: var(--a2); justify-content: center; align-items: flex-start; }
+.ba-kolonnen[hidden] { display: none; }
+.ba-kolonne {
+  width: var(--kolonne);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--a1);
+  padding: var(--a1) var(--a1) var(--a2);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--flaeche-2) 55%, transparent);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background var(--dauer) ease-out;
+}
+.ba-kolonne:hover:not(.inaktiv) { background: var(--flaeche-2); }
+.ba-kolonne.inaktiv { cursor: default; }
+.ba-kolonne.leer .ba-kol-nr { opacity: .5; }
+.ba-kol-nr { font-size: .78rem; color: var(--text-leise); line-height: 1; }
+.ba-sammler.gross { width: calc(var(--kolonne) - 14px); height: calc(var(--kolonne) - 14px); }
+.ba-sammler.gross .ba-zahl { font-size: 1rem; }
+.ba-kolonne.inaktiv:not(.leer) .ba-sammler.gross { opacity: .6; }
+.ba-sammler.ba-tipp { box-shadow: 0 0 0 3px var(--hg), 0 0 0 6px var(--fokus); }
+.ba-folge { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 100%; }
+.ba-sammler.klein {
+  width: calc(var(--kolonne) - 26px);
+  height: 22px;
+  border-radius: 7px;
+  flex-direction: row;
+  opacity: .8;
+}
+.ba-sammler.klein .ba-sammler-symbol { width: 14px; height: 14px; }
+.ba-sammler.klein .ba-zahl { font-size: .72rem; line-height: 1.25; min-width: 1.6em; }
+.ba-mehr { font-size: .78rem; line-height: 1.2; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ba-px.weg, .ba-bild-rahmen.fertig .ba-px { animation: none; }
+  .ba-bild { transition: none; }
+}
+html[data-bewegung="aus"] .ba-px.weg, html[data-bewegung="aus"] .ba-bild-rahmen.fertig .ba-px { animation: none; }
+html[data-bewegung="aus"] .ba-bild { transition: none; }

@@ -5,6 +5,10 @@ const { app } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
+// Wird die Ausgabe vorzeitig geschlossen (z. B. „| Select-Object -First 3“), keine Fehlermeldung auf dem Bildschirm
+for (const strom of [process.stdout, process.stderr]) strom.on('error', () => {});
+process.on('uncaughtException', (f) => { if (f?.code !== 'EPIPE') try { console.error(f); } catch { /* egal */ } });
+
 module.exports = async function selbsttest(win, ordner) {
   fs.mkdirSync(ordner, { recursive: true });
   const fehler = [];
@@ -26,8 +30,14 @@ module.exports = async function selbsttest(win, ordner) {
 
   for (const id of ['sudoku', 'farben-sortieren', 'block-puzzle', 'stau', 'minesweeper', 'nonogramm']) {
     await js(`location.hash = '#/spiel/${id}'`);
+    // Auswahl beim ersten Start: warten, bis sie da ist, dann „Standard nehmen“
+    for (let i = 0; i < 20; i++) {
+      await warte(200);
+      if (await js("(() => { const k = document.querySelector('dialog[open] .dialog-fuss .knopf'); if (k) k.click(); return !!k; })()")) break;
+    }
     await warte(5000);
-    const r = await js(`({ elemente: document.getElementById('spielflaeche')?.querySelectorAll('*').length ?? 0,
+    const r = await js(`({ hash: location.hash, h1: document.querySelector('h1')?.textContent, dialoge: [...document.querySelectorAll('dialog')].map(d => (d.open ? 'offen:' : 'zu:') + d.querySelector('h2')?.textContent),
+      elemente: document.getElementById('spielflaeche')?.querySelectorAll('*').length ?? 0,
       fehler: document.querySelector('.fehler-text')?.textContent ?? null,
       wartet: !(document.querySelector('.warten')?.hidden ?? true) })`);
     console.log(`SPIEL ${id}:`, JSON.stringify(r));

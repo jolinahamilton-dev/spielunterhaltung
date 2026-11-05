@@ -1,6 +1,6 @@
 // Wird von werkzeuge/precache-liste.ps1 geschrieben – Version hier oder per -Version erhöhen.
 // Jede Veröffentlichung braucht eine neue Version, sonst holt sich der Service Worker kein Update.
-self.SPIEL_VERSION = '1.1.1';
+self.SPIEL_VERSION = '1.4.0';
 self.SPIEL_DATEIEN = [
   './',
   './css/basis.css',
@@ -31,6 +31,10 @@ self.SPIEL_DATEIEN = [
   './kern/worker-helfer.js',
   './kern/zufall.js',
   './manifest.webmanifest',
+  './spiele/bild-abtragen/index.js',
+  './spiele/bild-abtragen/logik.js',
+  './spiele/bild-abtragen/motive.json',
+  './spiele/bild-abtragen/stil.css',
   './spiele/block-puzzle/formen.js',
   './spiele/block-puzzle/index.js',
   './spiele/block-puzzle/logik.js',
@@ -39,6 +43,10 @@ self.SPIEL_DATEIEN = [
   './spiele/farben-sortieren/index.js',
   './spiele/farben-sortieren/logik.js',
   './spiele/farben-sortieren/stil.css',
+  './spiele/malen-nach-zahlen/bilder.json',
+  './spiele/malen-nach-zahlen/index.js',
+  './spiele/malen-nach-zahlen/logik.js',
+  './spiele/malen-nach-zahlen/stil.css',
   './spiele/minesweeper/generator.worker.js',
   './spiele/minesweeper/index.js',
   './spiele/minesweeper/loeser.js',
@@ -51,7 +59,14 @@ self.SPIEL_DATEIEN = [
   './spiele/nonogramm/logik.js',
   './spiele/nonogramm/motive.json',
   './spiele/nonogramm/stil.css',
+  './spiele/rechenkreuz/generator.worker.js',
+  './spiele/rechenkreuz/index.js',
+  './spiele/rechenkreuz/logik.js',
+  './spiele/rechenkreuz/stil.css',
   './spiele/registry.js',
+  './spiele/sechseck-stapel/index.js',
+  './spiele/sechseck-stapel/logik.js',
+  './spiele/sechseck-stapel/stil.css',
   './spiele/stau/generator.worker.js',
   './spiele/stau/index.js',
   './spiele/stau/logik.js',
@@ -65,5 +80,9 @@ self.SPIEL_DATEIEN = [
   './spiele/test-raster/index.js',
   './spiele/test-raster/logik.js',
   './spiele/test-raster/stil.css',
+  './spiele/wortsuche/index.js',
+  './spiele/wortsuche/logik.js',
+  './spiele/wortsuche/stil.css',
+  './spiele/wortsuche/woerter.json',
   './version.js',
 ];

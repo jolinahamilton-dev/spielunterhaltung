@@ -1,0 +1,150 @@
+/* Wortsuche. Hochformat: Gitter oben (füllt die Breite), Wortliste darunter.
+   Breites Querformat: Gitter links, Wortliste rechts. */
+.ws {
+  --feld: min(100%, calc(100dvh - 250px), 600px);
+  display: grid;
+  grid-template-areas: "info" "feld" "liste";
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  align-content: start;
+  gap: var(--a3);
+  width: 100%;
+  max-width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+@media (min-width: 640px) and (min-aspect-ratio: 5/4) {
+  .ws {
+    --feld: min(calc(100dvh - 160px), calc(100vw - 340px), 640px);
+    grid-template-areas: "info info" "feld liste";
+    grid-template-columns: auto minmax(200px, 280px);
+    justify-content: center;
+    align-items: start;
+    column-gap: var(--a6);
+  }
+  .ws-liste-knopf { display: none !important; }
+  .ws-liste-bereich.zu .ws-liste { display: grid; }
+  .ws-liste { grid-template-columns: 1fr; }
+}
+
+.ws-info { grid-area: info; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: var(--a2) var(--a4); min-height: 1.8rem; }
+.ws-titel { font-weight: 650; font-size: 1.1rem; }
+.ws-stand { font-size: .92rem; font-variant-numeric: tabular-nums; }
+.ws-laden { grid-area: feld; margin: var(--a6) 0; }
+
+/* ---------- Gitter ---------- */
+.ws-rahmen {
+  grid-area: feld;
+  position: relative;
+  width: var(--feld);
+  aspect-ratio: 1;
+  min-width: 200px;
+  container-type: inline-size;
+  background: var(--flaeche);
+  border: 1px solid var(--rand);
+  border-radius: var(--radius);
+  box-shadow: var(--schatten);
+}
+.ws-rahmen[hidden] { display: none; }
+.ws-linien {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+.ws-feld {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  grid-template-rows: repeat(var(--n), 1fr);
+  touch-action: none;
+  cursor: pointer;
+  border-radius: var(--radius);
+  outline: none;
+}
+.ws-feld:focus-visible { box-shadow: 0 0 0 3px var(--fokus); }
+.ws-reihe { display: contents; }
+.ws-zelle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(100cqw / var(--n) * .56);
+  font-weight: 560;
+  line-height: 1;
+  color: var(--text);
+  border-radius: 50%;
+  font-variant-numeric: tabular-nums;
+}
+.ws-zelle.gefunden { font-weight: 750; }
+.ws-feld:focus-visible .ws-zelle.cursor { box-shadow: inset 0 0 0 2px var(--fokus); }
+.ws-zelle.anker { color: var(--akzent); font-weight: 750; }
+
+.ws-fund { fill-opacity: .42; stroke: none; }
+.ws-fund-symbol { fill: var(--text); opacity: .75; }
+.ws-auswahl { fill: var(--akzent); fill-opacity: .22; stroke: var(--akzent); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.ws-tipp { fill: none; stroke: var(--fokus); stroke-width: 2.5px; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; }
+.ws-blink { animation: ws-blink 240ms ease-out 1; }
+@keyframes ws-blink {
+  0% { stroke-width: 7px; opacity: .3; }
+  100% { stroke-width: 2.5px; opacity: 1; }
+}
+
+/* ---------- Wortliste ---------- */
+.ws-liste-bereich { grid-area: liste; width: var(--feld); min-width: 200px; display: grid; gap: var(--a2); }
+.ws-liste-bereich[hidden] { display: none; }
+@media (min-width: 640px) and (min-aspect-ratio: 5/4) {
+  .ws-liste-bereich { width: auto; }
+}
+.ws-liste-knopf { justify-self: start; gap: var(--a2); }
+.ws-pfeil { font-size: .8em; }
+.ws-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: var(--a1) var(--a3);
+}
+.ws-liste-bereich.zu .ws-liste { display: none; }
+.ws-wort {
+  display: flex;
+  align-items: center;
+  gap: var(--a2);
+  min-height: 30px;
+  padding: 2px var(--a2);
+  border-radius: var(--radius-klein);
+  font-weight: 600;
+  letter-spacing: .04em;
+  font-size: .95rem;
+  overflow-wrap: anywhere;
+}
+.ws-wort.gefunden .ws-wort-text { text-decoration: line-through; text-decoration-thickness: 2px; color: var(--text-leise); font-weight: 500; }
+.ws-wort.tipp { box-shadow: inset 0 0 0 2px var(--fokus); }
+.ws-punkt {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--rand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ws-wort.gefunden .ws-punkt { border-color: transparent; }
+.ws-punkt-symbol { width: 10px; height: 10px; fill: var(--text); opacity: .8; }
+
+@media (max-width: 560px) {
+  .ws { gap: var(--a2); }
+  .ws-liste { grid-template-columns: repeat(auto-fill, minmax(98px, 1fr)); gap: 0 var(--a2); }
+  .ws-wort { font-size: .85rem; min-height: 26px; padding: 1px var(--a1); gap: var(--a1); }
+  .ws-punkt { width: 11px; height: 11px; }
+  .ws-punkt-symbol { width: 8px; height: 8px; }
+}
+@media (max-width: 639px), (max-aspect-ratio: 5/4) {
+  .ws-liste { display: flex; flex-wrap: wrap; gap: 2px var(--a2); }
+  .ws-wort { white-space: nowrap; letter-spacing: .02em; }
+}
+circle.ws-tipp { stroke-dasharray: none; }

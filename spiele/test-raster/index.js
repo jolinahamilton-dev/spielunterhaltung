@@ -10,6 +10,7 @@ export default {
   id: 'test-raster',
   name: 'Lichter (Test)',
   beschreibung: 'Prüfspiel für das Grundgerüst',
+  variantenTitel: 'Größe',
   varianten: [{ id: 'klein', name: 'Klein (4×4)' }, { id: 'mittel', name: 'Mittel (5×5)' }],
   standVersion: 1,
 
