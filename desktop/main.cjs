@@ -95,7 +95,8 @@ function erstelleFenster() {
     if ((eingabe.control || eingabe.meta) && eingabe.key.toLowerCase() === 'r') { win.webContents.reload(); e.preventDefault(); }
   });
 
-  win.once('ready-to-show', () => win.show());
+  // Im Selbsttest bleibt das Fenster unsichtbar (stört nicht beim Arbeiten)
+  if (!process.env.SPIEL_SELBSTTEST) win.once('ready-to-show', () => win.show());
   win.on('close', () => speichereFenster(win));
   win.loadURL(START);
   return win;

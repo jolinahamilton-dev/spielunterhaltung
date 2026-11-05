@@ -2,6 +2,8 @@
 // Nötig, weil das Browser-Fenster in Claude keine Service Worker kann und kein Edge/Chrome da ist.
 // Voraussetzung: Testserver läuft auf Port 8080 (werkzeuge\server.ps1). Aufruf (PowerShell):
 //   & "..\anime-tracker\node_modules\electron\dist\electron.exe" werkzeuge\offline-pruefung.cjs
+// Vorzeitig geschlossene Ausgabe (z. B. „| Select-Object -First 3“) darf keine Fehlermeldung auslösen
+for (const strom of [process.stdout, process.stderr]) strom.on('error', () => {});
 const { app, BrowserWindow, session } = require('electron');
 const path = require('path');
 

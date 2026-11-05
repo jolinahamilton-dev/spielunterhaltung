@@ -2,6 +2,8 @@
 // Testserver muss laufen (werkzeuge\server.ps1, Port 8080). Jeder Aufruf startet mit leerem Speicher.
 //
 // Aufruf: über werkzeuge\test-lauf.ps1 (setzt die Umgebungsvariablen TL_*), siehe dort.
+// Vorzeitig geschlossene Ausgabe (z. B. „| Select-Object -First 3“) darf keine Fehlermeldung auslösen
+for (const strom of [process.stdout, process.stderr]) strom.on('error', () => {});
 const { app, BrowserWindow, nativeTheme } = require('electron');
 const fs = require('fs');
 const path = require('path');

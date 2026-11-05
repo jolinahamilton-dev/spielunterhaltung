@@ -5,6 +5,10 @@ const { app } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
+// Wird die Ausgabe vorzeitig geschlossen (z. B. „| Select-Object -First 3“), keine Fehlermeldung auf dem Bildschirm
+for (const strom of [process.stdout, process.stderr]) strom.on('error', () => {});
+process.on('uncaughtException', (f) => { if (f?.code !== 'EPIPE') try { console.error(f); } catch { /* egal */ } });
+
 module.exports = async function selbsttest(win, ordner) {
   fs.mkdirSync(ordner, { recursive: true });
   const fehler = [];
