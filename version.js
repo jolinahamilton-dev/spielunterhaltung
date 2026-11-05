@@ -1,6 +1,6 @@
 // Wird von werkzeuge/precache-liste.ps1 geschrieben – Version hier oder per -Version erhöhen.
 // Jede Veröffentlichung braucht eine neue Version, sonst holt sich der Service Worker kein Update.
-self.SPIEL_VERSION = '1.3.0';
+self.SPIEL_VERSION = '1.4.0';
 self.SPIEL_DATEIEN = [
   './',
   './css/basis.css',
@@ -56,6 +56,9 @@ self.SPIEL_DATEIEN = [
   './spiele/nonogramm/motive.json',
   './spiele/nonogramm/stil.css',
   './spiele/registry.js',
+  './spiele/sechseck-stapel/index.js',
+  './spiele/sechseck-stapel/logik.js',
+  './spiele/sechseck-stapel/stil.css',
   './spiele/stau/generator.worker.js',
   './spiele/stau/index.js',
   './spiele/stau/logik.js',

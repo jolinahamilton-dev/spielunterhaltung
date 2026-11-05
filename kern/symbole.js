@@ -57,6 +57,30 @@ export const SPIEL_SYMBOLE = Object.freeze({
     <g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".45"><rect x="20" y="10" width="6" height="6" rx="1"/><rect x="32" y="10" width="6" height="6" rx="1"/></g>
     <rect x="6" y="32" width="10" height="10" rx="2.5" fill="var(--spielfarbe-0)"/><rect x="19" y="32" width="10" height="10" rx="2.5" fill="var(--spielfarbe-3)"/><rect x="32" y="32" width="10" height="10" rx="2.5" fill="var(--spielfarbe-2)"/>
     <path d="M24 30v-4M11 30v-4M37 30v-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".55"/>`),
+  rechenkreuz: kachel(`
+    <g fill="none" stroke="currentColor" stroke-width="1.6" opacity=".5"><rect x="4" y="4" width="11" height="11" rx="2"/><rect x="33" y="4" width="11" height="11" rx="2"/><rect x="4" y="33" width="11" height="11" rx="2"/><rect x="33" y="33" width="11" height="11" rx="2"/></g>
+    <rect x="18.5" y="4" width="11" height="11" rx="2" fill="var(--akzent)"/><rect x="4" y="18.5" width="11" height="11" rx="2" fill="var(--akzent)"/><rect x="33" y="18.5" width="11" height="11" rx="2" fill="var(--akzent)"/><rect x="18.5" y="33" width="11" height="11" rx="2" fill="var(--akzent)"/>
+    <g font-family="system-ui" font-weight="700" font-size="9" text-anchor="middle" fill="currentColor"><text x="24" y="27">+</text><text x="9.5" y="12.5">3</text><text x="38.5" y="12.5">7</text><text x="9.5" y="41.5">=</text><text x="38.5" y="41.5">×</text></g>`),
+  'sechseck-stapel': kachel(`
+    <path d="M24 4l8 4.6v9.2L24 22.4l-8-4.6V8.6z" fill="var(--spielfarbe-5)"/>
+    <path d="M24 9l8 4.6v9.2L24 27.4l-8-4.6v-9.2z" fill="var(--spielfarbe-5)" opacity=".75"/>
+    <path d="M12 25l8 4.6v9.2L12 43.4l-8-4.6v-9.2z" fill="var(--spielfarbe-0)"/>
+    <path d="M36 25l8 4.6v9.2L36 43.4l-8-4.6v-9.2z" fill="var(--spielfarbe-2)"/>
+    <path d="M24 32l8 4.6v9.2L24 50.4l-8-4.6v-9.2z" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".45"/>`),
+  wortsuche: kachel(`
+    <g font-family="system-ui" font-weight="700" font-size="9" text-anchor="middle" fill="currentColor" opacity=".55">
+      <text x="9" y="13">K</text><text x="20" y="13">A</text><text x="31" y="13">T</text><text x="42" y="13">Z</text>
+      <text x="9" y="26">O</text><text x="20" y="26">P</text><text x="31" y="26">E</text><text x="42" y="26">L</text>
+      <text x="9" y="39">B</text><text x="20" y="39">A</text><text x="31" y="39">U</text><text x="42" y="39">M</text></g>
+    <rect x="3" y="2" width="44" height="15" rx="7.5" fill="var(--akzent)" opacity=".28"/>
+    <rect x="3" y="28" width="33" height="15" rx="7.5" fill="var(--spielfarbe-2)" opacity=".4"/>
+    <g font-family="system-ui" font-weight="700" font-size="9" text-anchor="middle" fill="currentColor"><text x="9" y="13">K</text><text x="20" y="13">A</text><text x="31" y="13">T</text><text x="42" y="13">Z</text><text x="9" y="39">B</text><text x="20" y="39">A</text><text x="31" y="39">U</text></g>`),
+  'malen-nach-zahlen': kachel(`
+    <g font-family="system-ui" font-weight="700" font-size="7.5" text-anchor="middle" fill="currentColor" opacity=".5">
+      <text x="30" y="11">2</text><text x="40" y="11">2</text><text x="40" y="21">1</text><text x="30" y="31">3</text><text x="40" y="31">3</text><text x="40" y="41">3</text></g>
+    <g fill="none" stroke="currentColor" stroke-width="1" opacity=".35"><rect x="5" y="4" width="40" height="40" rx="3"/><path d="M15 4v40M25 4v40M35 4v40M5 14h40M5 24h40M5 34h40"/></g>
+    <rect x="5" y="4" width="20" height="10" fill="var(--spielfarbe-5)"/><rect x="5" y="14" width="30" height="10" fill="var(--spielfarbe-2)"/>
+    <rect x="5" y="24" width="20" height="10" fill="var(--spielfarbe-3)"/><rect x="5" y="34" width="10" height="10" fill="var(--spielfarbe-3)"/>`),
   test: kachel(`
     <g fill="var(--akzent)"><rect x="6" y="6" width="10" height="10" rx="2"/><rect x="32" y="6" width="10" height="10" rx="2"/><rect x="19" y="19" width="10" height="10" rx="2"/><rect x="6" y="32" width="10" height="10" rx="2"/></g>
     <g fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"><rect x="19" y="6" width="10" height="10" rx="2"/><rect x="6" y="19" width="10" height="10" rx="2"/><rect x="32" y="19" width="10" height="10" rx="2"/><rect x="19" y="32" width="10" height="10" rx="2"/><rect x="32" y="32" width="10" height="10" rx="2"/></g>`),

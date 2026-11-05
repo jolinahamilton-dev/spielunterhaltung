@@ -45,6 +45,31 @@ export const SPIELE = [
     laden: () => import('./bild-abtragen/index.js'),
   },
   {
+    id: 'rechenkreuz', name: 'Rechenkreuz', symbol: SPIEL_SYMBOLE.rechenkreuz,
+    beschreibung: 'Rechenaufgaben kreuz und quer – jede Zahl muss in beide Richtungen passen.',
+    laden: null,
+  },
+  {
+    id: 'sechseck-stapel', name: 'Sechseck-Stapel', symbol: SPIEL_SYMBOLE['sechseck-stapel'],
+    beschreibung: 'Stapel ablegen, gleiche Farben wandern zusammen und lösen sich auf.',
+    laden: () => import('./sechseck-stapel/index.js'),
+    kachelText(speicher) {
+      const r = speicher.lies('rekorde', {}) || {};
+      const best = Math.max(0, ...Object.values(r).filter(Number.isFinite));
+      return best ? `Rekord ${best.toLocaleString('de-DE')}` : '';
+    },
+  },
+  {
+    id: 'wortsuche', name: 'Wortsuche', symbol: SPIEL_SYMBOLE.wortsuche,
+    beschreibung: 'Versteckte Wörter im Buchstabengitter finden.',
+    laden: null,
+  },
+  {
+    id: 'malen-nach-zahlen', name: 'Malen nach Zahlen', symbol: SPIEL_SYMBOLE['malen-nach-zahlen'],
+    beschreibung: 'Feld für Feld ein Bild ausmalen – jede Zahl hat ihre Farbe.',
+    laden: null,
+  },
+  {
     id: 'test-raster', name: 'Lichter (Test)', symbol: SPIEL_SYMBOLE.test, entwicklung: true,
     beschreibung: 'Prüfspiel für das Grundgerüst: alle Felder ausschalten.',
     laden: () => import('./test-raster/index.js'),
