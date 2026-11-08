@@ -1,12 +1,12 @@
 {
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Ruhige Spiele zum Abschalten – offline, ohne Werbung, ohne Töne",
   "homepage": "https://github.com/jolinahamilton-dev/spielunterhaltung",
   "license": "ISC",
   "architecture": {
     "64bit": {
-      "url": "https://github.com/jolinahamilton-dev/spielunterhaltung/releases/download/v1.4.1/spielunterhaltung-1.4.1-win.zip",
-      "hash": "cf12734c0efa0fc04397737fe0117d603e4032be4800682be92b2639826596bd"
+      "url": "https://github.com/jolinahamilton-dev/spielunterhaltung/releases/download/v1.5.0/spielunterhaltung-1.5.0-win.zip",
+      "hash": "d8f30d74a21de3654d1062b03b754a3bf7ab6fbf60a78674989bb8283295cac0"
     }
   },
   "shortcuts": [
