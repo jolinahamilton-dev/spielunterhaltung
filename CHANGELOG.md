@@ -1,5 +1,15 @@
 # Änderungen
 
+## 1.5.0 – 08.11.2026
+- Neu: **Punkte verbinden** (gleichfarbige Punkte zu Ketten ziehen, Schleifen räumen eine ganze Farbe; endlos oder mit Zielen)
+- Neu: **Schrauben** (Schrauben lösen, Bretter fallen lassen, Kisten füllen; Leicht/Mittel/Schwer)
+- Neu: **Schachtbetrieb** (Bergwerk ausbauen: Schächte, Aufzug, Verkaufszentrum; läuft auch während du weg bist)
+- Neu: **Lichtstrahlen** (Spiegel drehen, bis jeder Strahl sein Ziel trifft)
+- Neu: **Hafen** (Schiffe, Kräne, Lager und Leuchtturm ausbauen; läuft auch während du weg bist)
+- Neu: **Solitär** (klassische Patience, Ziehen von 1 oder 3 Karten, unbegrenzt Rückgängig)
+- Bild abtragen: Mehrere Sammler lassen sich jetzt wirklich nacheinander antippen, auch während andere noch arbeiten (Klicks gingen verloren, weil die Knöpfe bei jedem Arbeitstakt neu aufgebaut wurden)
+
+
 ## 1.4.1 – 05.11.2026
 - Bild abtragen: Mehrere Sammler arbeiten jetzt **gleichzeitig** – ein weiterer Sammler kann jederzeit losgeschickt werden und steigt in die laufende Arbeit ein (vorher war der erste beim zweiten Antippen schlagartig fertig). Rückgängig funktioniert auch mitten im Lauf.
 

@@ -1,0 +1,128 @@
+/* Punkte verbinden. Zellgröße hängt an Fensterbreite und -höhe (--b, --hh setzt das Spiel). */
+.pv {
+  --zelle: clamp(38px, min(calc((100vw - 32px) / var(--b, 6)), calc((100dvh - 300px) / var(--hh, 7))), 68px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--a3);
+  width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- Kopf: Ziele ---------- */
+.pv-kopf { display: flex; flex-direction: column; align-items: center; gap: var(--a2); min-height: 3.2rem; }
+.pv-level { font-weight: 650; font-size: 1.05rem; }
+.pv-ziele { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--a2) var(--a3); }
+.pv-ziel {
+  display: flex;
+  align-items: center;
+  gap: var(--a2);
+  padding: 3px 10px 3px 4px;
+  border-radius: 999px;
+  background: var(--flaeche-2);
+  font-variant-numeric: tabular-nums;
+}
+.pv-ziel.fertig { opacity: .6; }
+.pv-ziel-punkt {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pv-ziel-zahl { font-weight: 650; min-width: 1.4ch; text-align: center; }
+.pv-ziel.fertig .pv-ziel-zahl { color: var(--erfolg); }
+.pv-zaehler { display: flex; align-items: baseline; gap: var(--a2); margin: 0 var(--a3); }
+.pv-label { color: var(--text-leise); font-size: .85rem; }
+.pv-wert { font-size: 1.35rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+/* ---------- Feld ---------- */
+.pv-rahmen {
+  position: relative;
+  width: calc(var(--zelle) * var(--b, 6));
+  height: calc(var(--zelle) * var(--hh, 7));
+  border-radius: var(--radius);
+  background: var(--flaeche-2);
+  box-shadow: 0 0 0 6px var(--flaeche-2);
+}
+.pv-feld {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--b, 6), 1fr);
+  grid-template-rows: repeat(var(--hh, 7), 1fr);
+  touch-action: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  overflow: hidden;
+}
+.pv-feld:focus-visible { outline: 3px solid var(--fokus); outline-offset: 8px; }
+.pv-zelle { display: flex; align-items: center; justify-content: center; position: relative; }
+.pv-punkt {
+  width: 74%;
+  height: 74%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / .14), inset 0 2px 0 rgb(255 255 255 / .2);
+  transition: transform 90ms ease-out;
+  pointer-events: none;
+}
+.pv-zelle.im-pfad .pv-punkt { transform: scale(1.12); box-shadow: 0 0 0 3px var(--flaeche), 0 0 0 5px var(--text); }
+.pv-zelle.hinweis .pv-punkt { box-shadow: 0 0 0 3px var(--flaeche), 0 0 0 5px var(--fokus); }
+.pv-zelle.cursor::after {
+  content: '';
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  border: 3px dashed var(--fokus);
+  pointer-events: none;
+}
+.pv-symbol { width: 55%; height: 55%; fill: rgb(255 255 255 / .88); pointer-events: none; }
+
+.pv-punkt.faellt { animation: pv-fall 210ms cubic-bezier(.4, 0, .9, .6); }
+@keyframes pv-fall { from { transform: translateY(calc(var(--fall, 1) * var(--zelle) * -1)); } to { transform: none; } }
+
+.pv-feld.mischt { animation: pv-mischen 220ms ease-out; }
+@keyframes pv-mischen { from { opacity: .35; transform: scale(.97); } to { opacity: 1; transform: none; } }
+
+/* ---------- Kettenlinie ---------- */
+.pv-linien {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+.pv-unterlage { fill: none; stroke: var(--flaeche); stroke-width: .26; stroke-linecap: round; stroke-linejoin: round; opacity: .9; }
+.pv-linie { fill: none; stroke-width: .15; stroke-linecap: round; stroke-linejoin: round; }
+.pv-linie.hinweis, .pv-unterlage.hinweis { stroke-dasharray: .28 .26; }
+.pv-unterlage.hinweis { stroke-dasharray: none; opacity: .5; }
+
+/* ---------- Verschwindende Punkte ---------- */
+.pv-geister { position: absolute; inset: 0; pointer-events: none; }
+.pv-geist { position: absolute; display: flex; align-items: center; justify-content: center; animation: pv-weg 190ms ease-out forwards; }
+@keyframes pv-weg { to { opacity: 0; transform: scale(.4); } }
+
+/* ---------- Fuß ---------- */
+.pv-fuss { display: flex; flex-direction: column; align-items: center; gap: var(--a2); min-height: 6.5rem; text-align: center; }
+.pv-vorschau { margin: 0; min-height: 1.4em; font-size: .9rem; }
+.pv-status { margin: 0; min-height: 1.4em; font-size: .9rem; }
+.pv-status.warnung { color: var(--text); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pv-punkt.faellt, .pv-feld.mischt, .pv-geist { animation: none; }
+  .pv-punkt { transition: none; }
+}
+:root[data-bewegung="aus"] .pv-punkt.faellt, :root[data-bewegung="aus"] .pv-feld.mischt, :root[data-bewegung="aus"] .pv-geist,
+:root[data-bewegung="reduziert"] .pv-punkt.faellt, :root[data-bewegung="reduziert"] .pv-feld.mischt, :root[data-bewegung="reduziert"] .pv-geist { animation: none; }
+
+@media (max-width: 420px) {
+  .pv-ziele { gap: var(--a2) 6px; }
+  .pv-ziel { gap: 6px; padding: 3px 8px 3px 3px; }
+  .pv-ziel-punkt { width: 22px; height: 22px; }
+}

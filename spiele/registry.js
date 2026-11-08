@@ -70,6 +70,40 @@ export const SPIELE = [
     laden: () => import('./malen-nach-zahlen/index.js'),
   },
   {
+    id: 'punkte-verbinden', name: 'Punkte verbinden', symbol: SPIEL_SYMBOLE['punkte-verbinden'],
+    beschreibung: 'Gleichfarbige Punkte zu Ketten verbinden und Ziele sammeln.',
+    laden: () => import('./punkte-verbinden/index.js'),
+    kachelText(speicher) {
+      const r = speicher.lies('rekord', 0);
+      return Number.isInteger(r) && r > 0 ? `Rekord ${r.toLocaleString('de-DE')}` : '';
+    },
+  },
+  {
+    id: 'schrauben', name: 'Schrauben', symbol: SPIEL_SYMBOLE.schrauben,
+    beschreibung: 'Schrauben lösen, Bretter fallen lassen, Kisten füllen.',
+    laden: () => import('./schrauben/index.js'),
+  },
+  {
+    id: 'schachtbetrieb', name: 'Schachtbetrieb', symbol: SPIEL_SYMBOLE.schachtbetrieb,
+    beschreibung: 'Bergwerk ausbauen: Schächte, Aufzug und Verkaufszentrum verbessern.',
+    laden: () => import('./schachtbetrieb/index.js'),
+  },
+  {
+    id: 'lichtstrahlen', name: 'Lichtstrahlen', symbol: SPIEL_SYMBOLE.lichtstrahlen,
+    beschreibung: 'Spiegel drehen, bis jeder Lichtstrahl sein Ziel trifft.',
+    laden: () => import('./lichtstrahlen/index.js'),
+  },
+  {
+    id: 'hafen', name: 'Hafen', symbol: SPIEL_SYMBOLE.hafen,
+    beschreibung: 'Schiffe laufen ein, Kräne laden aus – den kleinen Hafen in Ruhe ausbauen.',
+    laden: () => import('./hafen/index.js'),
+  },
+  {
+    id: 'solitaer', name: 'Solitär', symbol: SPIEL_SYMBOLE.solitaer,
+    beschreibung: 'Karten nach Farbe und Reihenfolge ordnen – klassische Patience.',
+    laden: () => import('./solitaer/index.js'),
+  },
+  {
     id: 'test-raster', name: 'Lichter (Test)', symbol: SPIEL_SYMBOLE.test, entwicklung: true,
     beschreibung: 'Prüfspiel für das Grundgerüst: alle Felder ausschalten.',
     laden: () => import('./test-raster/index.js'),

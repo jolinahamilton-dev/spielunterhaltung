@@ -1,0 +1,123 @@
+/* Solitär. Spalten teilen sich die Breite, Karten überlappen vertikal (Versatz per --y in Kartenhöhen). */
+.so {
+  --luecke: clamp(3px, 1.4vw, 9px);
+  --cw: 44px;
+  --ch: calc(var(--cw) * 1.4);
+  --so-rot: #b3392f;
+  --so-schwarz: #232831;
+  --so-papier: #fdfbf6;
+  width: 100%;
+  max-width: 660px;
+  margin-inline: auto;
+  display: grid;
+  gap: var(--a3);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.so-oben, .so-brett {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  column-gap: var(--luecke);
+  align-items: start;
+}
+.so-brett { min-height: calc(var(--ch) * 3.4); }
+.so-warte { grid-column: 1 / -1; text-align: center; padding: var(--a6) 0; }
+
+/* ---------- Plätze ---------- */
+.so-slot, .so-spalte { position: relative; min-width: 0; }
+.so-slot { height: var(--ch); border-radius: calc(var(--cw) * .12); touch-action: none; cursor: pointer; }
+.so-spalte { border-radius: calc(var(--cw) * .12); }
+.so-leer {
+  position: absolute;
+  inset: 0;
+  height: var(--ch);
+  border: 2px dashed var(--rand);
+  border-radius: calc(var(--cw) * .12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-leise);
+  box-sizing: border-box;
+}
+.so-slot > .so-leer { width: 100%; }
+.so-ablage > .so-leer { width: var(--cw); }
+.so-spalte-leer { width: 100%; touch-action: none; }
+.so-mark .so-gross { position: static; width: 46%; height: auto; fill: currentColor; opacity: .38; }
+.so-wieder { width: 38%; height: auto; }
+
+/* ---------- Karten ---------- */
+.so-karte {
+  position: absolute;
+  left: calc(var(--cw) * var(--x, 0));
+  top: calc(var(--ch) * var(--y, 0));
+  width: var(--cw);
+  height: var(--ch);
+  box-sizing: border-box;
+  border-radius: calc(var(--cw) * .12);
+  overflow: hidden;
+}
+.so-karte.offen {
+  background: var(--so-papier);
+  border: 1px solid #aaa292;
+  box-shadow: 0 1px 2px rgb(0 0 0 / .22);
+  touch-action: none;
+  cursor: pointer;
+}
+.so-karte.rot { color: var(--so-rot); }
+.so-karte.schwarz { color: var(--so-schwarz); }
+.so-karte.verdeckt {
+  background:
+    repeating-linear-gradient(45deg, rgb(255 255 255 / .28) 0 2px, transparent 2px 6px),
+    var(--akzent);
+  border: 2px solid var(--so-papier);
+  box-shadow: 0 1px 2px rgb(0 0 0 / .25);
+}
+.so-ecke {
+  position: absolute;
+  left: 7%;
+  top: 4%;
+  display: flex;
+  align-items: center;
+  gap: 4%;
+  font-weight: 700;
+  font-size: calc(var(--cw) * .3);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.so-sym { width: calc(var(--cw) * .25); height: calc(var(--cw) * .25); fill: currentColor; flex: none; }
+.so-gross { position: absolute; right: 9%; bottom: 7%; width: 44%; height: auto; fill: currentColor; }
+
+/* ---------- Zustände ---------- */
+.so [role="button"]:focus-visible { outline: 3px solid var(--fokus); outline-offset: 1px; }
+.so-karte.hinweis, .so-slot.hinweis { box-shadow: 0 0 0 3px var(--akzent), 0 1px 2px rgb(0 0 0 / .22); }
+.so-slot.hinweis-ziel .so-leer, .so-spalte.hinweis-ziel { background: var(--akzent-sanft); }
+.so-spalte.hinweis-ziel { outline: 2px dashed var(--akzent); outline-offset: 2px; }
+.so-karte.gezogen, .so-slot.gezogen { opacity: .3; }
+.so-spalte.ziel-moeglich, .so-fundament.ziel-moeglich { outline: 2px dashed var(--akzent); outline-offset: 2px; }
+.so-spalte.ziel-aktiv, .so-fundament.ziel-aktiv { background: var(--akzent-sanft); outline-style: solid; }
+
+.so-geist {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: var(--cw);
+  z-index: 60;
+  pointer-events: none;
+  will-change: transform;
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / .25));
+  --so-rot: #b3392f;
+  --so-schwarz: #232831;
+  --so-papier: #fdfbf6;
+}
+.so-geist .so-karte { --x: 0; }
+
+/* ---------- Leiste ---------- */
+.so-leiste { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--a2); }
+.so-info { color: var(--text-leise); font-size: .9rem; font-variant-numeric: tabular-nums; }
+.so-status { min-height: 1.3em; margin: 0; font-size: .9rem; text-align: center; color: var(--text-leise); }
+
+@media (max-width: 420px) {
+  .so-karte.offen { border-radius: 5px; }
+  .so-leiste { justify-content: center; }
+}

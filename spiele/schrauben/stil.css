@@ -1,0 +1,218 @@
+/* Schrauben. Hochformat: Kisten oben, Wand in der Mitte, Parkplätze darunter.
+   Breites Querformat: Wand links, Kisten und Parkplätze rechts daneben. */
+.sr {
+  --sr-vh: calc(100dvh - 400px);
+  --sr-max: 460px;
+  --sr-dauer: 220ms;
+  /* Brettfarben je Schicht: hinten dunkler, vorne heller (Holz-/Metalltöne) */
+  --sr-t0: #b09676; --sr-t1: #bfa584; --sr-t2: #cdb594; --sr-t3: #d8c3a4; --sr-t4: #e2d0b4; --sr-t5: #ebdcc5;
+  --sr-kante: rgb(70 48 24 / .5);
+  --sr-schatten: rgb(40 28 14 / .35);
+  display: grid;
+  grid-template-areas: "info" "kisten" "wand" "parken" "unten";
+  grid-template-columns: minmax(0, 1fr);
+  --sr-voll: 100%;
+  justify-items: center;
+  gap: var(--a3);
+  width: 100%;
+  max-width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="hell"]) .sr {
+    --sr-t0: #4b4034; --sr-t1: #574a3b; --sr-t2: #645544; --sr-t3: #716050; --sr-t4: #7e6c59; --sr-t5: #8b7863;
+    --sr-kante: rgb(0 0 0 / .55);
+    --sr-schatten: rgb(0 0 0 / .5);
+  }
+}
+:root[data-theme="dunkel"] .sr {
+  --sr-t0: #4b4034; --sr-t1: #574a3b; --sr-t2: #645544; --sr-t3: #716050; --sr-t4: #7e6c59; --sr-t5: #8b7863;
+  --sr-kante: rgb(0 0 0 / .55);
+  --sr-schatten: rgb(0 0 0 / .5);
+}
+@media (min-width: 820px) and (min-aspect-ratio: 5/4) {
+  .sr {
+    --sr-vh: calc(100dvh - 190px);
+    --sr-max: 540px;
+    --sr-voll: 9999px;
+    grid-template-areas: "info info" "wand kisten" "wand parken" "wand unten";
+    grid-template-columns: auto minmax(260px, 340px);
+    grid-template-rows: auto auto auto 1fr;
+    justify-content: center;
+    align-items: start;
+    column-gap: var(--a6);
+    row-gap: var(--a4);
+  }
+}
+
+.sr-info { grid-area: info; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: var(--a2) var(--a4); min-height: 1.8rem; }
+.sr-titel { font-weight: 650; font-size: 1.1rem; }
+.sr-rest { font-size: .92rem; font-variant-numeric: tabular-nums; }
+.sr-etikett { margin: 0 0 var(--a1); font-size: .82rem; }
+
+/* ---------- Kisten ---------- */
+.sr-kisten-feld { grid-area: kisten; width: min(100%, 460px); }
+.sr-kisten { display: flex; flex-wrap: wrap; gap: var(--a2); justify-content: center; min-height: 58px; }
+.sr-warten { display: flex; flex-wrap: wrap; gap: var(--a1) var(--a2); align-items: center; justify-content: center; margin-top: var(--a2); }
+.sr-danach, .sr-mehr { font-size: .8rem; }
+
+.sr-kiste {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--kf);
+  border-radius: var(--radius-klein);
+  background: color-mix(in srgb, var(--kf) 20%, var(--flaeche));
+  box-shadow: var(--schatten);
+}
+.sr-kiste.gross { min-width: 92px; height: 52px; padding: 0 var(--a2); gap: var(--a2); }
+.sr-kiste.klein { width: 34px; height: 26px; border-width: 2px; }
+.sr-kiste.klein::after { content: ""; position: absolute; inset: 5px 7px; border-radius: 4px; background: var(--kf); opacity: .85; }
+.sr-kiste.klein .sr-kiste-symbol { position: absolute; z-index: 1; width: 14px; height: 14px; }
+.sr-kiste-symbol { width: 18px; height: 18px; fill: var(--text); opacity: .75; flex: none; pointer-events: none; }
+.sr-slots { display: flex; gap: 5px; }
+.sr-slot {
+  display: grid; place-items: center;
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px dashed color-mix(in srgb, var(--kf) 70%, var(--text-leise));
+  background: color-mix(in srgb, var(--flaeche) 70%, transparent);
+}
+.sr-slot.voll { border: 0; background: none; }
+.sr-slot .sr-kopf { width: 24px; }
+
+/* ---------- Schraubenkopf (Wand, Kisten, Parkplätze) ---------- */
+.sr-kopf {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 68%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid rgb(0 0 0 / .38);
+  background-clip: padding-box;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .25), 0 1px 3px rgb(0 0 0 / .35);
+  transition: transform var(--sr-dauer) ease-in, opacity var(--sr-dauer) ease-in;
+}
+.sr-kopf::before { /* Glanzlicht */
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, rgb(255 255 255 / .5), transparent 55%);
+  pointer-events: none;
+}
+.sr-schlitz {
+  position: absolute; left: 14%; right: 14%; top: calc(50% - 6%); height: 12%;
+  border-radius: 3px; background: rgb(0 0 0 / .4);
+  transform: rotate(var(--w, 0deg));
+  transition: transform var(--sr-dauer) ease-in;
+}
+.sr-kopf-symbol { position: relative; width: 52%; height: 52%; fill: rgb(0 0 0 / .45); pointer-events: none; z-index: 1; }
+
+/* ---------- Wand ---------- */
+.sr-wand-rahmen {
+  grid-area: wand;
+  width: max(260px, min(var(--sr-voll), calc(var(--sr-vh) * var(--b, 5) / var(--h, 6)), var(--sr-max)));
+  max-width: 100%;
+}
+.sr-wand {
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--b, 5) / var(--h, 6);
+  border-radius: var(--radius);
+  background-color: var(--flaeche-2);
+  background-image: radial-gradient(circle, var(--rand) 2px, transparent 2.6px);
+  background-size: calc(100% / var(--b, 5)) calc(100% / var(--h, 6));
+  box-shadow: inset 0 0 0 2px var(--rand);
+  touch-action: manipulation;
+}
+.sr-brett {
+  position: absolute;
+  filter: drop-shadow(0 2px 3px var(--sr-schatten));
+  pointer-events: none;
+  transition: transform var(--sr-dauer) ease-in, opacity var(--sr-dauer) ease-in;
+}
+.sr-brett.t0 { --tone: var(--sr-t0); } .sr-brett.t1 { --tone: var(--sr-t1); } .sr-brett.t2 { --tone: var(--sr-t2); }
+.sr-brett.t3 { --tone: var(--sr-t3); } .sr-brett.t4 { --tone: var(--sr-t4); } .sr-brett.t5 { --tone: var(--sr-t5); }
+.sr-k {
+  position: absolute;
+  box-sizing: border-box;
+  margin: -.3px;
+  padding: .3px;
+  background-color: var(--tone);
+  background-image: repeating-linear-gradient(100deg, transparent 0 9px, rgb(0 0 0 / .05) 9px 10px);
+  border: 0 solid var(--sr-kante);
+}
+.sr-k.kt { border-top-width: 2px; } .sr-k.kb { border-bottom-width: 2px; }
+.sr-k.kl { border-left-width: 2px; } .sr-k.kr { border-right-width: 2px; }
+.sr-brett.haengt { transform-origin: var(--ox, 50%) var(--oy, 50%); transform: rotate(var(--neig, 4deg)); }
+.sr-brett.weg {
+  transform: translateY(14%) rotate(9deg);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform var(--sr-dauer) ease-in, opacity var(--sr-dauer) ease-in, visibility 0s linear var(--sr-dauer);
+}
+
+.sr-schrauben { position: absolute; inset: 0; z-index: 100; }
+.sr-schraube {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  outline: none;
+  border-radius: 50%;
+}
+.sr-schraube:hover:not(.verdeckt):not(.blockiert) .sr-kopf { transform: scale(1.07); }
+.sr-schraube:focus-visible .sr-kopf { outline: 3px solid var(--fokus); outline-offset: 2px; }
+.sr-schraube.tipp .sr-kopf { box-shadow: 0 0 0 3px var(--fokus), 0 0 0 6px color-mix(in srgb, var(--fokus) 30%, transparent); }
+.sr-schraube.verdeckt { cursor: help; }
+.sr-schraube.verdeckt .sr-kopf { opacity: .34; transform: scale(.72); box-shadow: none; }
+.sr-schraube.blockiert { cursor: not-allowed; }
+.sr-schraube.blockiert .sr-kopf { opacity: .62; border-style: dashed; }
+.sr-schraube.weg { pointer-events: none; visibility: hidden; transition: visibility 0s linear var(--sr-dauer); }
+.sr-schraube.weg .sr-kopf { opacity: 0; transform: scale(.35) translateY(-30%); }
+.sr-schraube.weg .sr-schlitz { transform: rotate(calc(var(--w, 0deg) + 200deg)); }
+
+/* ---------- Parkplätze ---------- */
+.sr-parken-feld { grid-area: parken; width: min(100%, 460px); }
+.sr-parken { display: flex; gap: var(--a2); justify-content: center; flex-wrap: wrap; }
+.sr-platz {
+  display: grid; place-items: center;
+  width: 46px; height: 46px;
+  border: 2px dashed var(--rand);
+  border-radius: var(--radius-klein);
+  background: var(--flaeche);
+}
+.sr-platz.belegt { border-style: solid; box-shadow: var(--schatten); }
+.sr-platz .sr-kopf { width: 34px; }
+
+/* ---------- Status / Festgefahren ---------- */
+.sr-unten { grid-area: unten; width: min(100%, 460px); display: grid; gap: var(--a2); justify-items: center; }
+.sr-status { margin: 0; min-height: 1.3em; text-align: center; font-size: .92rem; }
+.sr-fest { width: 100%; }
+.sr-fest-karte {
+  padding: var(--a3) var(--a4);
+  border: 1px solid var(--rand);
+  border-radius: var(--radius);
+  background: var(--flaeche);
+  box-shadow: var(--schatten);
+  text-align: center;
+}
+.sr-fest-karte p { margin: 0 0 var(--a2); }
+.sr-fest-titel { font-weight: 650; }
+.sr-fest-knoepfe { display: flex; gap: var(--a2); justify-content: center; flex-wrap: wrap; }
+
+/* ---------- Ruhe: keine Bewegung ---------- */
+.sr.ruhig *, .sr.ruhig *::before, .sr.ruhig *::after { transition: none !important; animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .sr *, .sr *::before, .sr *::after { transition: none !important; animation: none !important; }
+}
+
+/* Bei eingeschalteten Mustern zeigt der Kopf das Farbsymbol statt des Schlitzes */
+.sr-kopf.mit-symbol .sr-schlitz { display: none; }
+.sr-kopf.mit-symbol .sr-kopf-symbol { width: 60%; height: 60%; fill: rgb(0 0 0 / .62); }

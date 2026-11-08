@@ -67,6 +67,45 @@ export const SPIEL_SYMBOLE = Object.freeze({
     <path d="M12 25l8 4.6v9.2L12 43.4l-8-4.6v-9.2z" fill="var(--spielfarbe-0)"/>
     <path d="M36 25l8 4.6v9.2L36 43.4l-8-4.6v-9.2z" fill="var(--spielfarbe-2)"/>
     <path d="M24 32l8 4.6v9.2L24 50.4l-8-4.6v-9.2z" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".45"/>`),
+  'punkte-verbinden': kachel(`
+    <circle cx="11" cy="12" r="5.5" fill="var(--akzent)"/>
+    <circle cx="24" cy="12" r="5.5" fill="var(--akzent)"/>
+    <circle cx="37" cy="12" r="5.5" fill="var(--akzent)"/>
+    <circle cx="37" cy="25" r="5.5" fill="var(--akzent)"/>
+    <path d="M11 12H37V25" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="11" cy="37" r="5.5" fill="currentColor" opacity=".45"/>
+    <circle cx="24" cy="30" r="5.5" fill="currentColor" opacity=".45"/>
+    <circle cx="37" cy="40" r="5.5" fill="currentColor" opacity=".45"/>`),
+  schrauben: kachel(`
+    <rect x="4" y="8" width="40" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="2.2" opacity=".5"/>
+    <circle cx="13" cy="15" r="4" fill="var(--akzent)"/>
+    <circle cx="35" cy="15" r="4" fill="currentColor" opacity=".45"/>
+    <g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="24" cy="34" r="8.5"/><path d="M24 28.5v11M18.5 34h11"/></g>`),
+  schachtbetrieb: kachel(`
+    <rect x="5" y="5" width="38" height="8" rx="2" fill="var(--akzent)"/>
+    <path d="M13 13v31" stroke="currentColor" stroke-width="2.2" opacity=".5"/>
+    <rect x="8" y="22" width="10" height="9" rx="2" fill="var(--akzent)"/>
+    <path d="M22 24h20M22 36h20" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+    <rect x="33" y="18" width="9" height="6" rx="1.5" fill="var(--spielfarbe-2)"/>
+    <rect x="33" y="30" width="9" height="6" rx="1.5" fill="var(--spielfarbe-2)"/>`),
+  lichtstrahlen: kachel(`
+    <rect x="4" y="4" width="40" height="40" rx="6" fill="none" stroke="currentColor" stroke-width="2.5"/>
+    <path d="M8 14H34L34 38" fill="none" stroke="var(--akzent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M28 8 40 20" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="34" cy="38" r="4.5" fill="none" stroke="currentColor" stroke-width="2.2"/>
+    <circle cx="8" cy="14" r="2.6" fill="var(--akzent)"/>`),
+  hafen: kachel(`
+    <path d="M9 40 12 14h8l3 26z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M11 24h10M10 32h12" stroke="currentColor" stroke-width="2" opacity=".6"/>
+    <path d="M11 14 16 6l5 8" fill="none" stroke="var(--akzent)" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M26 34h18l-3.5 7h-11z" fill="var(--akzent)"/>
+    <path d="M35 34V22l7 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M3 45c4-2 7 2 11 0s7 2 11 0 7 2 11 0 7 2 9 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".5"/>`),
+  solitaer: kachel(`
+    <rect x="5" y="9" width="21" height="30" rx="3.5" fill="var(--spielfarbe-4)"/>
+    <g transform="rotate(14 31 26)"><rect x="19" y="7" width="21" height="31" rx="3.5" fill="#fdfbf6" stroke="currentColor" stroke-width="1.6"/>
+    <path d="M29.5 31.5C26.2 29 25.2 27.5 25.2 26.2a2.3 2.3 0 0 1 4.3-1.1 2.3 2.3 0 0 1 4.3 1.1c0 1.3-1 2.8-4.3 5.3Z" fill="var(--spielfarbe-0)"/>
+    <text x="23.5" y="16.5" font-size="8" fill="var(--spielfarbe-0)" font-family="system-ui" font-weight="700">A</text></g>`),
   wortsuche: kachel(`
     <g font-family="system-ui" font-weight="700" font-size="9" text-anchor="middle" fill="currentColor" opacity=".55">
       <text x="9" y="13">K</text><text x="20" y="13">A</text><text x="31" y="13">T</text><text x="42" y="13">Z</text>

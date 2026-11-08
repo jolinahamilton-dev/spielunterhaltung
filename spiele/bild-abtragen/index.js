@@ -66,6 +66,7 @@ export default {
     let zellKey = [];
     let kolKnoepfe = [];
     let gebaut = '';
+    let kolKey = '';
 
     // ---------- Darstellung ----------
     const farbName = (f) => ctx.farben.liste[f]?.name ?? `Farbe ${f + 1}`;
@@ -86,6 +87,7 @@ export default {
       const sig = `${z.b}x${z.h}|${z.kolonnen.length}`;
       if (sig === gebaut) return;
       gebaut = sig;
+      kolKey = '';
       bildEl.style.setProperty('--b', String(z.b));
       bildEl.style.setProperty('--h', String(z.h));
       bildEl.style.setProperty('--n', String(Math.max(z.b, z.h)));
@@ -141,6 +143,11 @@ export default {
 
     function zeichneKolonnen() {
       const platzFrei = z.plaetze.includes(null) && !L.gewonnen(z);
+      // Nur neu aufbauen, wenn sich etwas geändert hat: Wird ein Knopf-Inhalt zwischen Maus-/Fingerdruck
+      // und Loslassen ersetzt (bei jedem Arbeitstakt), geht der Klick verloren.
+      const key = `${z.pos.join(',')}|${platzFrei}|${tipp}|${ctx.farben.musterAn()}|${z.kolonnen.length}|${z.level}|${z.seed}`;
+      if (key === kolKey) return;
+      kolKey = key;
       z.kolonnen.forEach((kol, k) => {
         const knopf = kolKnoepfe[k];
         const pos = z.pos[k];
