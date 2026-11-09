@@ -11,7 +11,7 @@ export const OFFLINE_FAKTOR = 0.5;       // ab OFFLINE_VOLL_S zählt nur die Hä
 export const OFFLINE_VOLL_S = 60;
 export const ANSCHUB_S = 3;              // so viel Förderung bringt ein Antippen
 export const ANSCHUB_SPERRE_S = 1.5;
-const MAX_SCHRITTE = 600;
+const MAX_SCHRITTE = 4000;
 const MAX_T = 4e12;                      // Zeitstempel-Grenze (Jahr ~2096)
 
 /** Alle Zahlen der Wachstumskurve an einer Stelle */
@@ -19,7 +19,7 @@ export const KURVE = Object.freeze({
   // Bergleute: Wert je Fahrt, Fahrzeit
   wert0: 6, wertFaktor: 8, miner0: 12, tempoF: 1.1, tragF: 1.1,
   // Aufzug
-  fahrt0: 3, fahrtJeSchacht: 5, aufzugTempoF: 1.2, aufzugLadung0: 100, aufzugLadungF: 1.5,
+  fahrt0: 3, fahrtJeSchacht: 5, aufzugTempoF: 1.2, aufzugLadung0: 60, aufzugLadungF: 1.5,
   // Zentrum
   zentrumZeit0: 6, zentrumTempoF: 1.2, zentrumLadung0: 100, zentrumLadungF: 1.5,
   // Kosten: Basis · Wachstum^(Stufe−1) · Tiefenfaktor^Schacht
@@ -34,6 +34,8 @@ export const KURVE = Object.freeze({
     schacht: { basis: 300, wachs: 12 },
   },
   tiefe: 24,
+  // Puffer: Schachtlager fasst so viele Sekunden Förderung, das Eingangslager des Zentrums so viele Sekunden Verkauf
+  lagerSek: 40, eingangSek: 20,
 });
 
 export const SCHACHT_NAMEN = Object.freeze([
@@ -96,6 +98,9 @@ export function ausSpeicher(o) {
       };
     }),
   };
+  // Übernahme älterer Stände: Puffer an die Kapazität anpassen
+  z.schaechte.forEach((s, k) => { s.kiste = Math.min(s.kiste, lagerKap(s, k)); });
+  z.zentrum.lager = Math.min(z.zentrum.lager, eingangKap(z));
   return z;
 }
 
@@ -129,16 +134,31 @@ export function zentrumZeit(z) { return KURVE.zentrumZeit0 / pot(KURVE.zentrumTe
 export function verkaufsRate(z) { return zentrumLadung(z) / zentrumZeit(z); }
 
 /** Ungefähres Einkommen im Dauerbetrieb (Taler/s): Förderung, durch Aufzug und Zentrum begrenzt */
-export function einkommen(z) {
-  let p = 0, f = 0;
+export function aufzugFluss(z) {
+  let p = 0, f = 0, t = 0;
   const lad = aufzugLadung(z);
   z.schaechte.forEach((s, k) => {
     const pk = foerderung(s, k);
     p += pk;
     f += (pk / lad) * fahrtZeit(z, k);
+    t += pk * fahrtZeit(z, k);
   });
-  const aufzugTaler = f > 1 ? p / f : p;
-  return Math.min(aufzugTaler, verkaufsRate(z));
+  const fluss = f > 1 ? p / f : p;
+  return { fluss, fahrt: p > 0 ? t / p : 0 };
+}
+
+export function einkommen(z) {
+  return Math.min(aufzugFluss(z).fluss, verkaufsRate(z));
+}
+
+/** Fassungsvermögen des Schachtlagers (Erz) */
+export function lagerKap(s, k) { return KURVE.lagerSek * foerderung(s, k); }
+/** Fassungsvermögen des Eingangslagers im Zentrum (Erz) */
+export function eingangKap(z) { return KURVE.eingangSek * verkaufsRate(z); }
+/** Ungefähre Last, die der Aufzug im Dauerbetrieb je Fahrt trägt (Erz, nach Little: Durchsatz · Fahrzeit) */
+export function aufzugLast(z) {
+  const a = aufzugFluss(z);
+  return Math.min(aufzugLadung(z), a.fluss * a.fahrt);
 }
 
 // ---------- Fortschritt ----------
@@ -154,8 +174,14 @@ export function fortschritt(z, dt) {
   const fahrt = c.schaechte.map((_, k) => fahrtZeit(c, k));
   const lad = aufzugLadung(c);
   const rate = verkaufsRate(c);
+  const kap = c.schaechte.map((s, k) => lagerKap(s, k));
+  const capZ = eingangKap(c);
   for (let schritt = 0; schritt < n; schritt++) {
-    for (let i = 0; i < K; i++) c.schaechte[i].kiste += prod[i] * h;
+    for (let i = 0; i < K; i++) {
+      const s = c.schaechte[i];
+      s.kiste = Math.min(kap[i], s.kiste + prod[i] * h);
+    }
+    let frei = Math.max(0, capZ - c.zentrum.lager);
     // Aufzug: Zeitbudget h, zwei Durchgänge proportional zu den Beständen
     let zeit = h;
     let geliefert = 0;
@@ -167,7 +193,8 @@ export function fortschritt(z, dt) {
       for (let i = 0; i < K; i++) {
         const s = c.schaechte[i];
         const t = (budget * s.kiste) / summe;
-        const traeg = Math.min(s.kiste, (t * lad) / fahrt[i]);
+        const traeg = Math.min(s.kiste, (t * lad) / fahrt[i], frei);
+        frei -= traeg;
         s.kiste -= traeg;
         geliefert += traeg;
         zeit -= (traeg * fahrt[i]) / lad;
@@ -297,6 +324,24 @@ export function bezeichnung(was) {
   if (teile[0] === 'zentrum') return `Zentrum: ${art}`;
   const k = Number(String(teile[0]).slice(1));
   return `Schacht ${k + 1}: ${art}`;
+}
+
+/** Kurze Wirkung eines Kaufs, z. B. „+10 % Tempo“ */
+export function effektText(z, was) {
+  const proz = (f) => `+${Math.round((f - 1) * 100)} %`;
+  if (was === 'schacht') {
+    const k = z.schaechte.length;
+    return `+${formatiere(foerderung({ n: 1, tempo: 1, trag: 1 }, k))} Erz/s`;
+  }
+  const teile = String(was).split(':');
+  const art = teile[1];
+  if (teile[0] === 'aufzug') return art === 'tempo' ? `${proz(KURVE.aufzugTempoF)} Tempo` : `${proz(KURVE.aufzugLadungF)} Ladung`;
+  if (teile[0] === 'zentrum') return art === 'tempo' ? `${proz(KURVE.zentrumTempoF)} Verkaufstempo` : `${proz(KURVE.zentrumLadungF)} Ladung`;
+  const sh = z.schaechte[Number(teile[0].slice(1))];
+  if (!sh) return '';
+  if (art === 'n') return `+1 Bergmann (${proz((sh.n + 1) / sh.n)})`;
+  if (art === 'tempo') return `${proz(KURVE.tempoF)} Tempo`;
+  return `${proz(KURVE.tragF)} Tragkraft`;
 }
 
 // ---------- Darstellung der Zahlen ----------

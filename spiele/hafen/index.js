@@ -1,5 +1,6 @@
-// Hafen: ruhiges Idle-Spiel. Schiffe laufen ein, Kräne entladen, das Lager verkauft.
+// Hafen: ruhiges Idle-Spiel mit Ebenen. Jede Ebene hat eine eigene Ressource, ein Dock mit Schiffen, Kran und Lager.
 // Bedienung: Maus/Touch oder Tab + Enter auf den Knöpfen · Schiff antippen = leichter Schub · Taste K kauft das „Nächste Ziel“.
+// Wichtig: Knöpfe und Anzeigen werden nur einmal gebaut; pro Tick ändern sich nur Texte/Maße, und nur bei Änderung.
 import { h, s, ladeStil } from '../../kern/dom.js';
 import { zeigeDialog } from '../../kern/dialog.js';
 import * as L from './logik.js';
@@ -7,14 +8,25 @@ import * as L from './logik.js';
 const TICK_MS = 200;             // Rechen- und Anzeigetakt
 const SPEICHER_S = 10;           // so oft wird zwischendurch gespeichert
 const WEG_MELDUNG_S = 60;        // ab dieser Abwesenheit „Während du weg warst“
-const FRACHT_FARBE = [1, 2, 4];  // Farbindex je Frachtart (nur für Chips und Ladebalken)
+
+/** Einfache Symbole je Ressource (viewBox 0 0 24 24) */
+const ICON = [
+  'M4 6h16v5H4zM4 13h16v5H4z',
+  'M2 12c4-7 12-7 16 0-4 7-12 7-16 0zM18 12l4-5v10z',
+  'M12 3l8 6-3 11H7L4 9z',
+  'M6 8l6-4 6 5-2 9-8 1z',
+  'M4 6h13a3 3 0 010 6H4zM4 14h16v4H4z',
+  'M12 3a5 5 0 015 5c0 4-5 8-5 13 0-5-5-9-5-13a5 5 0 015-5z',
+  'M3 10h18a9 9 0 01-18 0zM8 21h8v-1H8z',
+  'M3 15a4 4 0 108 0 4 4 0 10-8 0zM13 15a4 4 0 108 0 4 4 0 10-8 0zM8 8a4 4 0 108 0 4 4 0 10-8 0z',
+];
 
 export default {
   id: 'hafen',
   name: 'Hafen',
-  beschreibung: 'Schiffe laufen ein, Kräne laden aus, das Lager verkauft – baue deinen kleinen Hafen in Ruhe aus.',
+  beschreibung: 'Ebene für Ebene einen kleinen Hafen ausbauen: Schiffe, Kräne, Lager und Verkauf – in Ruhe.',
   varianten: [{ id: 'standard', name: 'Standard' }],
-  standVersion: 1,
+  standVersion: L.STAND_VERSION,
 
   erstelle(container, ctx, gespeichert) {
     ladeStil('spiele/hafen/stil.css');
@@ -32,26 +44,31 @@ export default {
       z = L.neuerHafen(start);
     }
 
-    let letzt = start;            // Zeitpunkt des letzten Ticks
+    let letzt = start;
     let timer = 0;
     let sekundenSeitSpeichern = 0;
     let zerstoert = false;
-    let dockZahl = -1;
-    const docks = [];             // Oberflächen-Elemente je Dock
+    const karten = [];            // Oberflächen-Elemente je Ebene
 
-    const farbe = (f) => ctx.farben.css(FRACHT_FARBE[f] % ctx.farben.anzahl);
+    const farbe = (i) => ctx.farben.css(i % ctx.farben.anzahl);
+    const setzeText = (el, text) => { if (el.textContent !== text) el.textContent = text; };
+    const setzeAttr = (el, name, wert) => { if (el.getAttribute(name) !== wert) el.setAttribute(name, wert); };
+    const ruhig = () => ctx.bewegungReduziert();
 
-    // ---------- DOM ----------
+    // ---------- Feste Geldleiste ----------
     const geldEl = h('span', { class: 'ha-geld-wert' });
-    const rateEl = h('span', { class: 'ha-rate leise' });
-    const lagerFuell = h('span', { class: 'ha-fuell' });
-    const lagerBalken = h('span', { class: 'ha-balken', 'aria-hidden': 'true' }, lagerFuell);
-    const lagerTxt = h('span', { class: 'ha-lager-txt' });
+    const rateEl = h('span', { class: 'ha-rate' });
     const zielText = h('span', { class: 'ha-ziel-text' });
     const zielKnopf = h('button', {
       type: 'button', class: 'knopf klein ha-ziel-knopf', text: 'Kaufen',
       on: { click: () => kaufeZiel() },
     });
+    const leiste = h('div', { class: 'ha-leiste' },
+      h('div', { class: 'ha-leiste-oben' },
+        h('div', { class: 'ha-geld', 'aria-label': 'Geld in Münzen' }, geldEl, h('span', { class: 'ha-einheit', text: ' Münzen' })),
+        rateEl),
+      h('div', { class: 'ha-leiste-ziel' }, h('span', { class: 'ha-ziel-titel', text: 'Ziel' }), zielText, zielKnopf));
+
     const wegText = h('span', { class: 'ha-weg-text' });
     const wegKnopf = h('button', {
       type: 'button', class: 'knopf klein', text: 'OK', 'aria-label': 'Hinweis schließen',
@@ -60,14 +77,59 @@ export default {
     const wegEl = h('div', { class: 'ha-weg', role: 'status', hidden: true }, wegText, wegKnopf);
     const statusEl = h('p', { class: 'ha-status', role: 'status', 'aria-live': 'polite' });
 
-    const kopf = h('div', { class: 'ha-kopf' },
-      h('div', { class: 'ha-geld', 'aria-label': 'Geld in Münzen' }, geldEl, h('span', { class: 'ha-einheit', text: ' Münzen' })),
-      rateEl,
-    );
-    const lagerZeile = h('div', { class: 'ha-lager', 'aria-label': 'Lager' }, lagerBalken, lagerTxt);
-    const ziel = h('div', { class: 'ha-ziel' }, h('span', { class: 'ha-ziel-titel', text: 'Nächstes Ziel' }), zielText, zielKnopf);
+    // ---------- Bausteine ----------
+    /** Mengenzeile: Beschriftung, Balken, „Menge / Kapazität“ */
+    function messer(name) {
+      const fuell = h('span', { class: 'ha-fuell' });
+      const zahl = h('span', { class: 'ha-zahl' });
+      const el = h('div', { class: 'ha-messer' },
+        h('span', { class: 'ha-messer-name', text: name }),
+        h('span', { class: 'ha-balken', 'aria-hidden': 'true' }, fuell),
+        zahl);
+      return { el, fuell, zahl, proz: -1 };
+    }
+    function setzeMesser(m, menge, kap, zusatz = '') {
+      const p = kap > 0 ? Math.max(0, Math.min(100, Math.round((menge / kap) * 100))) : 0;
+      if (p !== m.proz) { m.proz = p; m.fuell.style.width = `${p}%`; m.el.classList.toggle('voll', p >= 98); }
+      setzeText(m.zahl, `${L.formatiere(menge)} / ${L.formatiere(kap)}${zusatz}`);
+    }
 
-    // Szene: Leuchtturm, Strahl, Wellen
+    /** Kaufknopf: Name, Wirkung, Stufe, Preis; Inhalte werden nur bei Änderung gesetzt */
+    function kaufKnopf(was, name, klasse = '') {
+      const wirkEl = h('span', { class: 'ha-kauf-wirkung' });
+      const stufeEl = h('span', { class: 'ha-kauf-stufe' });
+      const preisEl = h('span', { class: 'ha-kauf-preis' });
+      const el = h('button', {
+        type: 'button', class: `ha-kauf ${klasse}`.trim(), dataset: { was },
+        on: { click: () => kaufeWas(was) },
+      }, h('span', { class: 'ha-kauf-name', text: name }), wirkEl, h('span', { class: 'ha-kauf-zeile' }, stufeEl, preisEl));
+      return { el, wirkEl, stufeEl, preisEl, was, name, key: '' };
+    }
+
+    function aktualisiereKnopf(k) {
+      const p = L.preis(z, k.was);
+      const bezahlbar = p !== null && z.geld >= p;
+      const ef = p === null ? null : L.effekt(z, k.was);
+      const stufeText = k.was === 'ebene' ? '' : (k.was.endsWith(':lotse') ? (z.ebenen[Number(k.was[1])].lotse ? '' : 'fehlt') : `Stufe ${L.stufe(z, k.was)}`);
+      const key = `${stufeText}|${p}|${bezahlbar}|${ef ? ef.text : ''}`;
+      if (key === k.key) return;
+      k.key = key;
+      setzeText(k.wirkEl, p === null ? 'ausgebaut' : ef.text);
+      setzeText(k.stufeEl, stufeText);
+      setzeText(k.preisEl, p === null ? 'Fertig' : L.formatiere(p));
+      setzeAttr(k.el, 'aria-disabled', String(!bezahlbar));
+      k.el.classList.toggle('bereit', bezahlbar);
+      setzeAttr(k.el, 'aria-label', p === null
+        ? `${k.name}: ${stufeText}, fertig ausgebaut`
+        : `${k.name}: ${stufeText}, ${ef.text}, plus ${L.formatiere(ef.plus)} Münzen pro Sekunde, ${L.formatiere(p)} Münzen${bezahlbar ? '' : ', noch zu teuer'}`);
+    }
+
+    function symbolSvg(i) {
+      return s('svg', { viewBox: '0 0 10 10', class: 'ha-symbol', 'aria-hidden': 'true' },
+        s('path', { d: ctx.farben.symbolPfad(i % ctx.farben.anzahl), 'fill-rule': 'evenodd' }));
+    }
+
+    // ---------- Szene mit Leuchtturm ----------
     const turmInfo = h('span', { class: 'ha-turm-info' });
     const strahl = h('span', { class: 'ha-strahl', 'aria-hidden': 'true' });
     const turmSvg = s('svg', { viewBox: '0 0 40 90', class: 'ha-turm', 'aria-hidden': 'true' },
@@ -77,223 +139,170 @@ export default {
       s('rect', { x: 14, y: 18, width: 12, height: 8, class: 'ha-turm-lampe' }),
       s('path', { d: 'M12 18 L20 8 L28 18 Z', class: 'ha-turm-dach' }),
       s('rect', { x: 8, y: 86, width: 24, height: 4, class: 'ha-turm-sockel' }));
-    const szene = h('div', { class: 'ha-szene', role: 'img', 'aria-label': 'Hafen mit Leuchtturm und Meer' },
-      h('span', { class: 'ha-welle ha-welle-1', 'aria-hidden': 'true' }),
-      h('span', { class: 'ha-welle ha-welle-2', 'aria-hidden': 'true' }),
-      strahl, turmSvg, turmInfo);
 
-    const dockListe = h('div', { class: 'ha-docks', 'aria-label': 'Docks' });
-    const neuesDockKnopf = h('button', {
-      type: 'button', class: 'ha-kauf ha-neues-dock', dataset: { was: 'dock' },
-      on: { click: () => kaufeWas('dock') },
-    });
+    // ---------- Karte „Hafenanlagen“ (global) ----------
+    const hauptMesser = messer('Hauptlager');
+    const verkaufEl = h('span', { class: 'ha-zeile-info' });
+    const turmKnopf = kaufKnopf('turm', 'Leuchtturm');
+    const halleKnopf = kaufKnopf('halle', 'Verkaufshalle');
+    const anlagen = h('section', { class: 'ha-karte ha-anlagen', 'aria-label': 'Hafenanlagen' },
+      h('div', { class: 'ha-szene', role: 'img', 'aria-label': 'Hafen mit Leuchtturm' },
+        h('span', { class: 'ha-welle ha-welle-1', 'aria-hidden': 'true' }),
+        h('span', { class: 'ha-welle ha-welle-2', 'aria-hidden': 'true' }),
+        strahl, turmSvg, turmInfo),
+      h('h3', { class: 'ha-titel', text: 'Hafenanlagen' }),
+      hauptMesser.el, verkaufEl,
+      h('div', { class: 'ha-knoepfe zwei' }, turmKnopf.el, halleKnopf.el));
+
+    // ---------- Ebenen ----------
+    const ebenenListe = h('div', { class: 'ha-ebenen', 'aria-label': 'Ebenen' });
+    const neueEbeneKnopf = kaufKnopf('ebene', 'Nächste Ebene freischalten', 'ha-neue-ebene');
     const neuerHafen = h('button', {
       type: 'button', class: 'knopf klein ha-neu', text: 'Neuer Hafen',
       on: { click: () => neuMitFrage() },
     });
 
-    // ---------- Kaufknöpfe ----------
-    function kaufKnopf(was, name) {
-      const stufeEl = h('span', { class: 'ha-kauf-stufe' });
-      const preisEl = h('span', { class: 'ha-kauf-preis' });
-      const el = h('button', {
-        type: 'button', class: 'ha-kauf', dataset: { was },
-        on: { click: () => kaufeWas(was) },
-      }, h('span', { class: 'ha-kauf-name', text: name }), stufeEl, preisEl);
-      return { el, stufeEl, preisEl, was, name, key: '' };
-    }
-
-    function aktualisiereKnopf(k, stufeText, naechsteText) {
-      const p = L.preis(z, k.was);
-      const bezahlbar = p !== null && z.geld >= p;
-      const key = `${stufeText}|${p}|${bezahlbar}`;
-      if (key === k.key) return;
-      k.key = key;
-      k.stufeEl.textContent = stufeText;
-      k.preisEl.textContent = p === null ? 'Fertig' : L.formatiere(p);
-      k.el.setAttribute('aria-disabled', String(!bezahlbar));
-      k.el.classList.toggle('bereit', bezahlbar);
-      k.el.setAttribute('aria-label', p === null
-        ? `${k.name}: ${stufeText}, fertig ausgebaut`
-        : `${k.name}: ${stufeText}, ${naechsteText}, ${L.formatiere(p)} Münzen${bezahlbar ? '' : ', noch zu teuer'}`);
-    }
-
-    const kn = {
-      kranTempo: kaufKnopf('kran:tempo', 'Tempo'),
-      kranKap: kaufKnopf('kran:kap', 'Kapazität'),
-      groesse: kaufKnopf('schiff:groesse', 'Größe'),
-      haeufig: kaufKnopf('schiff:haeufig', 'Häufigkeit'),
-      halle: kaufKnopf('halle', 'Lagerhalle'),
-      turm: kaufKnopf('turm', 'Leuchtturm'),
-      lotse: kaufKnopf('lotse', 'Lotsenboot'),
-    };
-    const gruppe = (titel, knoepfe, klasse) => h('section', { class: 'ha-gruppe', 'aria-label': titel },
-      h('h3', { class: 'ha-titel', text: titel }),
-      h('div', { class: `ha-knoepfe ${klasse}` }, knoepfe.map((k) => k.el)));
-
-    const upgrades = h('div', { class: 'ha-upgrades' },
-      gruppe('Kräne', [kn.kranTempo, kn.kranKap], 'zwei'),
-      gruppe('Schiffe', [kn.groesse, kn.haeufig], 'zwei'),
-      gruppe('Hafenanlagen', [kn.halle, kn.turm, kn.lotse], 'drei'),
-    );
-
-    const wurzel = h('div', { class: 'ha' },
-      kopf, lagerZeile, ziel, wegEl, statusEl, szene,
-      dockListe, h('div', { class: 'ha-neues-dock-zeile' }, neuesDockKnopf),
-      upgrades,
-      h('div', { class: 'ha-fuss' }, neuerHafen),
-    );
-    container.append(wurzel);
-
-    function symbolSvg(f) {
-      return s('svg', { viewBox: '0 0 10 10', class: 'ha-symbol', 'aria-hidden': 'true' },
-        s('path', { d: ctx.farben.symbolPfad(FRACHT_FARBE[f] % ctx.farben.anzahl), 'fill-rule': 'evenodd' }));
-    }
-
-    /** Karte für Dock k anlegen */
-    function baueDock(k) {
-      const titel = h('h3', { class: 'ha-titel', text: `Dock ${k + 1}` });
-      const frachtKnopf = h('button', {
-        type: 'button', class: 'ha-fracht',
-        on: { click: () => wechsleFracht(k) },
-      });
-      const info = h('span', { class: 'ha-zeile-info' });
+    function baueKarte(i) {
+      const info = L.EBENEN[i];
+      const badge = h('span', { class: 'ha-badge', style: { background: farbe(i) }, 'aria-hidden': 'true' },
+        s('svg', { viewBox: '0 0 24 24', class: 'ha-icon' }, s('path', { d: ICON[i], 'fill-rule': 'evenodd' })));
+      const symbolHalter = h('span', { class: 'ha-symbol-halter' });
+      const ertrag = h('span', { class: 'ha-ertrag' });
+      const wertEl = h('span', { class: 'ha-zeile-info', text: `${L.formatiere(info.wert)} ${info.wert === 1 ? 'Münze' : 'Münzen'} je Einheit` });
       const phaseTxt = h('span', { class: 'ha-zeile-info ha-phase' });
-      const ladung = h('span', { class: 'ha-ladung' });
+      const ladung = h('span', { class: 'ha-ladung', style: { background: farbe(i) } });
       const schiff = h('button', {
         type: 'button', class: 'ha-schiff',
-        'aria-label': `Schiff an Dock ${k + 1} antippen: leichter Schub beim Entladen`,
-        on: { click: () => schub(k) },
+        'aria-label': `Schiff ${info.name} antippen: leichter Schub beim Entladen`,
+        on: { click: () => schub(i) },
       }, h('span', { class: 'ha-rumpf' }, ladung), h('span', { class: 'ha-mast' }));
       const see = h('div', { class: 'ha-see' },
         h('span', { class: 'ha-kai', 'aria-hidden': 'true' }),
         h('span', { class: 'ha-kran', 'aria-hidden': 'true' }),
         schiff);
-      const el = h('section', { class: 'ha-dock', 'aria-label': `Dock ${k + 1}` },
-        h('div', { class: 'ha-dock-kopf' }, titel, frachtKnopf),
+      const mSchiff = messer('Schiff');
+      const mLager = messer('Dock-Lager');
+      const mHaupt = messer('Im Verkauf');
+      const knoepfe = ['kran', 'schiff', 'lager', 'lotse'].map((art) => kaufKnopf(`e${i}:${art}`, {
+        kran: 'Kran', schiff: 'Schiffe', lager: 'Dock-Lager', lotse: 'Lotsenboot',
+      }[art]));
+      const el = h('section', { class: 'ha-karte ha-ebene', 'aria-label': `Ebene ${i + 1}: ${info.name}`, style: { '--ha-farbe': farbe(i) } },
+        h('div', { class: 'ha-ebene-kopf' },
+          badge,
+          h('div', { class: 'ha-ebene-titel' },
+            h('h3', { class: 'ha-titel' }, symbolHalter, `Ebene ${i + 1} · ${info.name}`),
+            wertEl),
+          ertrag),
         see,
-        h('div', { class: 'ha-dock-fuss' }, info, phaseTxt),
-      );
-      return { k, el, info, phaseTxt, ladung, schiff, frachtKnopf, frachtKey: '' };
+        phaseTxt,
+        h('div', { class: 'ha-messer-liste' }, mSchiff.el, mLager.el, mHaupt.el),
+        h('div', { class: 'ha-knoepfe zwei' }, knoepfe.map((k) => k.el)));
+      return { i, el, ertrag, phaseTxt, ladung, schiff, mSchiff, mLager, mHaupt, knoepfe, symbolHalter, symbolKey: null, lad: -1, pos: '' };
     }
 
-    function stelleDocksSicher() {
-      if (dockZahl === z.docks.length) return;
-      while (docks.length > z.docks.length) docks.pop().el.remove();
-      while (docks.length < z.docks.length) {
-        const d = baueDock(docks.length);
-        docks.push(d);
-        dockListe.append(d.el);
+    function stelleKartenSicher() {
+      if (karten.length === z.ebenen.length) return;
+      while (karten.length > z.ebenen.length) karten.pop().el.remove();
+      while (karten.length < z.ebenen.length) {
+        const k = baueKarte(karten.length);
+        karten.push(k);
+        ebenenListe.append(k.el);
       }
-      dockZahl = z.docks.length;
     }
+
+    const wurzel = h('div', { class: 'ha' },
+      leiste, wegEl, statusEl, anlagen, ebenenListe,
+      h('div', { class: 'ha-neue-ebene-zeile' }, neueEbeneKnopf.el),
+      h('div', { class: 'ha-fuss' }, neuerHafen));
+    container.append(wurzel);
+
+    // Die feste Leiste sitzt unter der Kopfleiste der Shell
+    function setzeOben() {
+      const kopf = document.querySelector('.kopfleiste');
+      const px = kopf ? Math.round(kopf.getBoundingClientRect().height) : 0;
+      wurzel.style.setProperty('--ha-oben', `${px}px`);
+    }
+    setzeOben();
+    window.addEventListener('resize', setzeOben, { signal: ctx.signal });
 
     // ---------- Darstellung ----------
-    function setzeText(el, text) { if (el.textContent !== text) el.textContent = text; }
-    const ruhig = () => ctx.bewegungReduziert();
-    const komma = (x, n = 1) => x.toFixed(n).replace('.', ',');
-
-    function schiffPosition(dock) {
-      const ph = L.phasen(z, dock.f);
-      const p = dock.p;
-      let x;           // 1 = rechts draußen, 0 = am Kai
-      let lad;         // Ladungsanteil im Schiff
-      let text;
-      if (p < ph.von) { x = 1 - p / ph.von; lad = 1; text = 'läuft ein'; x = x * x; }
-      else if (p < ph.bis) { x = 0; lad = 1 - (p - ph.von) / (ph.bis - ph.von); text = 'wird entladen'; }
-      else { const q = (p - ph.bis) / (1 - ph.bis); x = q * q; lad = 0; text = 'legt ab'; }
+    function schiffPhase(i) {
+      const e = z.ebenen[i];
+      const ph = L.phasen(z, i);
+      let x; let lad; let text;
+      if (e.p < ph.von) { const q = 1 - e.p / ph.von; x = q * q; lad = 1; text = 'läuft ein'; }
+      else if (e.p < ph.bis) { x = 0; lad = 1 - (e.p - ph.von) / (ph.bis - ph.von); text = 'wird entladen'; }
+      else { const q = (e.p - ph.bis) / (1 - ph.bis); x = q * q; lad = 0; text = 'legt ab'; }
       return { x, lad, text };
     }
 
-    function zeichneDock(d, dock) {
-      const { x, lad, text } = schiffPosition(dock);
-      const fr = L.FRACHT[dock.f];
-      const key = `${dock.f}|${ctx.farben.musterAn()}|${z.turm}`;
-      if (d.frachtKey !== key) {
-        d.frachtKey = key;
-        d.frachtKnopf.replaceChildren(
-          ...(ctx.farben.musterAn() ? [symbolSvg(dock.f)] : []),
-          h('span', { class: 'ha-fracht-punkt', style: { background: farbe(dock.f) }, 'aria-hidden': 'true' }),
-          h('span', { text: fr.name }),
-        );
-        const mehr = L.naechsteFracht(z, d.k) !== dock.f;
-        d.frachtKnopf.setAttribute('aria-label', mehr
-          ? `Fracht von Dock ${d.k + 1}: ${fr.name}. Ändern`
-          : `Fracht von Dock ${d.k + 1}: ${fr.name}. Noch keine andere Fracht freigeschaltet`);
-        d.frachtKnopf.setAttribute('aria-disabled', String(!mehr));
-        d.ladung.style.background = farbe(dock.f);
+    function zeichneKarte(k, detail) {
+      const e = z.ebenen[k.i];
+      const { x, lad, text } = schiffPhase(k.i);
+      const pos = ruhig() ? '0' : x.toFixed(3);
+      if (pos !== k.pos) { k.pos = pos; k.schiff.style.setProperty('--x', pos); }
+      const ladP = Math.round(lad * 100);
+      if (ladP !== k.lad) { k.lad = ladP; k.ladung.style.height = `${ladP}%`; }
+      const S = L.schiffGroesse(z, k.i);
+      setzeText(k.ertrag, `+${L.formatiere(detail.je[k.i])}/s`);
+      setzeText(k.phaseTxt, `Schiff ${text}`);
+      setzeMesser(k.mSchiff, S * lad, S);
+      setzeMesser(k.mLager, e.puffer, L.ebenenKap(e));
+      setzeMesser(k.mHaupt, z.haupt[k.i], L.hallenKap(z));
+      const mus = ctx.farben.musterAn();
+      if (k.symbolKey !== mus) {
+        k.symbolKey = mus;
+        k.symbolHalter.replaceChildren(...(mus ? [symbolSvg(k.i)] : []));
       }
-      const pos = ruhig() ? 0 : x;
-      d.schiff.style.setProperty('--x', String(pos));
-      d.ladung.style.height = `${Math.round(lad * 100)}%`;
-      setzeText(d.info, `${L.formatiere(L.schiffGroesse(z, dock.f))} ${fr.name} je Schiff · +${L.formatiere(L.schiffGroesse(z, dock.f) / L.zyklusZeit(z, dock.f))}/s`);
-      setzeText(d.phaseTxt, `Schiff ${text} · ${Math.round(lad * 100)} % an Bord`);
+      k.knoepfe.forEach(aktualisiereKnopf);
     }
 
     function zeichne() {
-      stelleDocksSicher();
+      stelleKartenSicher();
       wurzel.classList.toggle('ha-still', ruhig());
       setzeText(geldEl, L.formatiere(z.geld));
-      const e = L.einkommen(z);
-      setzeText(rateEl, `ca. +${L.formatiere(e)} pro Sekunde`);
+      const detail = L.einkommenDetail(z);
+      setzeText(rateEl, `+${L.formatiere(detail.gesamt)}/s`);
 
-      // Lager
-      const kap = L.lagerKap(z);
-      const voll = L.lagerSumme(z) >= kap * 0.98;
-      lagerFuell.style.width = `${Math.min(100, (L.lagerSumme(z) / kap) * 100)}%`;
-      lagerBalken.classList.toggle('voll', voll);
-      setzeText(lagerTxt, `Lager ${L.formatiere(L.lagerSumme(z))} von ${L.formatiere(kap)} · verkauft ${L.formatiere(L.verkaufsRate(z))}/s${voll ? ' · voll, Kräne warten' : ''}`);
-
-      // Nächstes Ziel
+      // Ziel (knapp)
       const g = L.naechstesZiel(z);
       if (!g) {
-        setzeText(zielText, 'Alles ausgebaut – dein Hafen ist fertig.');
+        setzeText(zielText, 'Alles ausgebaut');
         zielKnopf.hidden = true;
       } else {
-        const wz = g.wartezeit <= 0 ? 'jetzt möglich' : `in ca. ${L.formatiereDauer(g.wartezeit)}`;
-        setzeText(zielText, `${L.bezeichnung(g.was)} · ${L.formatiere(g.preis)} Münzen · ${wz}`);
+        const wz = g.wartezeit <= 0 ? 'jetzt' : `in ${L.formatiereDauer(g.wartezeit)}`;
+        setzeText(zielText, `${L.bezeichnung(g.was)} · ${L.formatiere(g.preis)} · ${wz}`);
         zielKnopf.hidden = false;
-        zielKnopf.setAttribute('aria-disabled', String(z.geld < g.preis));
+        setzeAttr(zielKnopf, 'aria-disabled', String(z.geld < g.preis));
         zielKnopf.classList.toggle('bereit', z.geld >= g.preis);
-        zielKnopf.setAttribute('aria-label', `Nächstes Ziel kaufen: ${L.bezeichnung(g.was)}, ${L.formatiere(g.preis)} Münzen`);
+        setzeAttr(zielKnopf, 'aria-label', `Nächstes Ziel kaufen: ${L.bezeichnung(g.was)}, ${L.formatiere(g.preis)} Münzen`);
       }
 
-      // Szene
+      // Anlagen
+      setzeMesser(hauptMesser, L.hauptSumme(z), L.hallenKap(z));
+      setzeText(verkaufEl, `Verkauf ${L.formatiere(L.verkaufsRate(z))} Einheiten/s · teuerste Ware zuerst`);
       setzeText(turmInfo, `Leuchtturm Stufe ${z.turm}`);
-      szene.style.setProperty('--reichweite', String(Math.min(1, 0.35 + z.turm * 0.03)));
+      const reich = String(Math.min(1, 0.35 + z.turm * 0.03));
+      if (anlagen.style.getPropertyValue('--reichweite') !== reich) anlagen.style.setProperty('--reichweite', reich);
+      aktualisiereKnopf(turmKnopf);
+      aktualisiereKnopf(halleKnopf);
 
-      // Docks
-      z.docks.forEach((dock, k) => zeichneDock(docks[k], dock));
-      const pd = L.preis(z, 'dock');
-      neuesDockKnopf.hidden = pd === null;
-      if (pd !== null) {
-        const ok = z.geld >= pd;
-        const txt = `Neues Dock bauen (Dock ${z.docks.length + 1}) · ${L.formatiere(pd)} Münzen`;
-        setzeText(neuesDockKnopf, txt);
-        neuesDockKnopf.setAttribute('aria-disabled', String(!ok));
-        neuesDockKnopf.setAttribute('aria-label', `${txt}${ok ? '' : ', noch zu teuer'}`);
-        neuesDockKnopf.classList.toggle('bereit', ok);
+      // Ebenen
+      karten.forEach((k) => zeichneKarte(k, detail));
+
+      // nächste Ebene
+      const pe = L.preis(z, 'ebene');
+      neueEbeneKnopf.el.hidden = pe === null;
+      if (pe !== null) {
+        const name = L.EBENEN[z.ebenen.length].name;
+        setzeText(neueEbeneKnopf.el.querySelector('.ha-kauf-name'), `Ebene ${z.ebenen.length + 1} freischalten: ${name}`);
+        aktualisiereKnopf(neueEbeneKnopf);
       }
-
-      // Upgrades
-      const st = (was) => `Stufe ${L.stufe(z, was)}`;
-      const nx = (was) => `Stufe ${L.stufe(z, was) + 1}`;
-      aktualisiereKnopf(kn.kranTempo, st('kran:tempo'), nx('kran:tempo'));
-      aktualisiereKnopf(kn.kranKap, st('kran:kap'), nx('kran:kap'));
-      aktualisiereKnopf(kn.groesse, st('schiff:groesse'), nx('schiff:groesse'));
-      aktualisiereKnopf(kn.haeufig, st('schiff:haeufig'), nx('schiff:haeufig'));
-      aktualisiereKnopf(kn.halle, st('halle'), nx('halle'));
-      const frachtHinweis = z.turm < L.FRACHT[1].turm - 1 ? `Fisch ab Stufe ${L.FRACHT[1].turm}`
-        : z.turm < L.FRACHT[2].turm - 1 && z.turm >= L.FRACHT[1].turm - 1 ? `Erz ab Stufe ${L.FRACHT[2].turm}` : nx('turm');
-      aktualisiereKnopf(kn.turm, st('turm'), frachtHinweis.startsWith('Stufe') ? frachtHinweis : `${nx('turm')}, ${frachtHinweis}`);
-      aktualisiereKnopf(kn.lotse, z.lotse ? 'vorhanden' : 'Anlegen automatisch', 'Anlegen automatisch und schneller');
     }
 
     function zeichneWeg() {
       wegEl.hidden = !weg;
-      if (weg) {
-        setzeText(wegText, `Während du weg warst (${L.formatiereDauer(weg.dt)}): +${L.formatiere(weg.gewinn)} Münzen`);
-      }
+      if (weg) setzeText(wegText, `Während du weg warst (${L.formatiereDauer(weg.dt)}): +${L.formatiere(weg.gewinn)} Münzen`);
     }
 
     // ---------- Aktionen ----------
@@ -323,22 +332,11 @@ export default {
 
     function kaufeZiel() {
       const g = L.naechstesZiel(z);
-      if (!g) return false;
-      return kaufeWas(g.was);
+      return g ? kaufeWas(g.was) : false;
     }
 
-    function wechsleFracht(k) {
-      const f = L.naechsteFracht(z, k);
-      const r = L.weise(z, k, f);
-      if (!r.ok || f === z.docks[k].f) { ctx.meldung('Noch keine andere Fracht freigeschaltet (Leuchtturm ausbauen).'); return; }
-      z = r.zustand;
-      sage(`Dock ${k + 1} lädt jetzt ${L.FRACHT[f].name}.`);
-      ctx.meldeAenderung();
-      zeichne();
-    }
-
-    function schub(k) {
-      const r = L.anschub(z, k);
+    function schub(i) {
+      const r = L.anschub(z, i);
       if (r.ok) { z = r.zustand; zeichne(); }
     }
 
@@ -355,7 +353,6 @@ export default {
       z = L.neuerHafen(Date.now());
       letzt = Date.now();
       weg = null;
-      dockZahl = -1;
       sage('Neuer Hafen gestartet.');
       zeichneWeg();
       zeichne();
@@ -390,7 +387,7 @@ export default {
     function stoppeTakt() { clearInterval(timer); timer = 0; }
 
     ctx.signal?.addEventListener('abort', stoppeTakt);
-    const abmelden = ctx.farben.beobachte(() => { docks.forEach((d) => { d.frachtKey = ''; }); zeichne(); });
+    const abmelden = ctx.farben.beobachte(() => { karten.forEach((k) => { k.symbolKey = null; }); zeichne(); });
 
     zeichneWeg();
     zeichne();
@@ -399,7 +396,7 @@ export default {
     // ---------- Schnittstelle ----------
     return {
       getStand: () => L.zumSpeichern(z, Date.now()),
-      zusammenfassung: () => `${L.formatiere(z.geld)} Münzen · ${z.docks.length} ${z.docks.length === 1 ? 'Dock' : 'Docks'}`,
+      zusammenfassung: () => `${L.formatiere(z.geld)} Münzen · ${z.ebenen.length} ${z.ebenen.length === 1 ? 'Ebene' : 'Ebenen'}`,
       kannRueckgaengig: () => false,
       rueckgaengig() { return false; },
       neu() { neuStart(); },

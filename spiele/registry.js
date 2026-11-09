@@ -95,7 +95,7 @@ export const SPIELE = [
   },
   {
     id: 'hafen', name: 'Hafen', symbol: SPIEL_SYMBOLE.hafen,
-    beschreibung: 'Schiffe laufen ein, Kräne laden aus – den kleinen Hafen in Ruhe ausbauen.',
+    beschreibung: 'Ebene für Ebene einen kleinen Hafen ausbauen – Schiffe, Kräne, Lager, Verkauf.',
     laden: () => import('./hafen/index.js'),
   },
   {

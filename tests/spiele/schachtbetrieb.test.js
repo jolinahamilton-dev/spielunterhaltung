@@ -493,3 +493,90 @@ test('Still: kein vibrate/Audio/eval/innerHTML, keine Inline-Styles als Text', a
   const css = await fetch(new URL('../../spiele/schachtbetrieb/stil.css', import.meta.url)).then((r) => r.text());
   wahr(!/#[0-9a-f]{3,8}\b/i.test(css), 'keine festen Farben im CSS');
 });
+
+// ---------- Puffer (Schachtlager, Aufzug, Eingangslager) ----------
+test('Puffer: Schachtlager und Eingangslager überschreiten nie ihre Kapazität', () => {
+  let z = greedy(40).z;
+  for (let i = 0; i < 300; i++) {
+    z = L.fortschritt(z, 7);
+    z.schaechte.forEach((s, k) => wahr(s.kiste <= L.lagerKap(s, k) + 1e-6, `Schacht ${k} voll ${s.kiste} > ${L.lagerKap(s, k)}`));
+    wahr(z.zentrum.lager <= L.eingangKap(z) + 1e-6, 'Eingangslager');
+  }
+  const gross = L.fortschritt(z, 14430);
+  gross.schaechte.forEach((s, k) => wahr(s.kiste <= L.lagerKap(s, k) + 1e-6));
+  wahr(gross.zentrum.lager <= L.eingangKap(gross) + 1e-6);
+});
+
+test('Puffer: langsamer Aufzug lässt das Schachtlager volllaufen, Förderung stoppt dort', () => {
+  const z = L.neuesBergwerk(0);
+  z.schaechte[0] = { n: 20, tempo: 20, trag: 20, kiste: 0 };   // Förderung weit über dem Aufzug
+  const a = L.fortschritt(z, 600);
+  gleich(Math.abs(a.schaechte[0].kiste - L.lagerKap(a.schaechte[0], 0)) < L.lagerKap(a.schaechte[0], 0) * 0.5, true, 'Lager (fast) voll');
+  const einnahme = a.geld / 600;
+  wahr(einnahme <= L.einkommen(z) * 1.05, `Einnahme ${einnahme} ≤ Schätzung ${L.einkommen(z)}`);
+});
+
+test('Puffer: Aufzug-Ladung ist durch die Kapazität begrenzt; Erz geht nicht verloren', () => {
+  const z = greedy(20).z;
+  wahr(L.aufzugLast(z) > 0 && L.aufzugLast(z) <= L.aufzugLadung(z));
+  // Bilanz: Lager + Kisten + Geld gewinnen genau so viel, wie die Bergleute gefördert haben (hier ohne Deckel)
+  const a = L.neuesBergwerk(0);
+  const b = L.fortschritt(a, 30);
+  const foerder = L.foerderung(a.schaechte[0], 0) * 30;
+  wahr(Math.abs(b.geld + b.zentrum.lager + b.schaechte[0].kiste - foerder) < 1e-6, 'Erz bleibt erhalten');
+});
+
+test('Puffer: Offline-Rechnung bleibt gedeckelt und konsistent', () => {
+  const z = greedy(25).z;
+  z.t = 1_000_000_000_000;
+  const o = L.offline(z, z.t + 24 * 3600_000).zustand;
+  wahr(Number.isFinite(o.geld) && L.istGueltig(o));
+  o.schaechte.forEach((s, k) => wahr(s.kiste <= L.lagerKap(s, k) + 1e-6));
+  // Mehr als der Deckel bringt nichts mehr
+  tief(L.offline(z, z.t + 100 * 3600_000).zustand.geld, o.geld);
+  // Nie mehr als Einkommen · wirksame Zeit
+  wahr(o.geld - z.geld <= L.einkommen(z) * L.luecke(8 * 3600) * 1.05 + z.zentrum.lager + 1, 'nicht über dem Dauereinkommen');
+});
+
+test('Alte Stände werden übernommen: Puffer über der Kapazität werden gekappt', () => {
+  const z = greedy(8).z;
+  const s = JSON.parse(JSON.stringify(L.zumSpeichern(z, 1)));
+  s.schaechte[0].kiste = 1e9;
+  s.zentrum.lager = 1e9;
+  const n = L.ausSpeicher(s);
+  gleich(n.schaechte[0].kiste, L.lagerKap(n.schaechte[0], 0));
+  gleich(n.zentrum.lager, L.eingangKap(n));
+});
+
+test('Wirkungs-Vorschau: kurzer Text je Kauf', () => {
+  const z = L.neuesBergwerk(0);
+  gleich(L.effektText(z, 's0:tempo'), '+10 % Tempo');
+  gleich(L.effektText(z, 's0:trag'), '+10 % Tragkraft');
+  gleich(L.effektText(z, 's0:n'), '+1 Bergmann (+100 %)');
+  gleich(L.effektText(z, 'aufzug:tempo'), '+20 % Tempo');
+  gleich(L.effektText(z, 'aufzug:ladung'), '+50 % Ladung');
+  gleich(L.effektText(z, 'zentrum:tempo'), '+20 % Verkaufstempo');
+  wahr(L.effektText(z, 'schacht').includes('Erz/s'));
+  gleich(L.effektText(z, 's9:n'), '');
+  gleich(L.effektText(z, 'xyz'), '');
+});
+
+test('Oberfläche: Kaufknöpfe behalten ihren Knoten über viele Ticks (Klicks gehen nicht verloren)', async () => {
+  const z = L.neuesBergwerk(Date.now());
+  z.geld = 5;
+  await mit(L.zumSpeichern(z, Date.now()), async (i, c) => {
+    const vorher = [...c.querySelectorAll('.sb-kauf')];
+    await warte(900);
+    const nachher = [...c.querySelectorAll('.sb-kauf')];
+    gleich(nachher.length, vorher.length);
+    vorher.forEach((b, n) => wahr(b === nachher[n] && b.isConnected, `Knopf ${n} neu aufgebaut`));
+    const stufe = c.querySelector('[data-was="s0:n"] .sb-kauf-stufe').firstChild;
+    await warte(500);
+    wahr(c.querySelector('[data-was="s0:n"] .sb-kauf-stufe').firstChild === stufe, 'Textknoten bleibt');
+    wahr(c.querySelector('.sb-leiste'), 'feste Leiste vorhanden');
+    wahr(c.querySelector('.sb-schacht .sb-lager .sb-kiste'), 'Schachtlager');
+    wahr(c.querySelector('.sb-schacht .sb-kauf-effekt').textContent.includes('%'), 'Wirkung im Knopf');
+    wahr(c.querySelector('.sb-zentrum .sb-menge-wert').textContent.includes('Erz'), 'Menge Zentrum');
+    wahr(c.querySelector('.sb-aufzug .sb-menge-wert').textContent.includes('Erz'), 'Menge Aufzug');
+  });
+});

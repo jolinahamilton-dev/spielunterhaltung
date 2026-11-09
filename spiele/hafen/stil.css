@@ -1,38 +1,34 @@
-/* Hafen. Alles untereinander (ab 360 px); Szene oben mit Leuchtturm und Wellen. */
+/* Hafen mit Ebenen. Alles untereinander (ab 360 px); feste Geldleiste oben. */
 .ha {
+  --ha-oben: 0px;
   display: grid;
   gap: var(--a3);
   width: 100%;
   max-width: 560px;
   margin-inline: auto;
+  align-self: flex-start;
   padding-bottom: var(--a5);
   user-select: none;
   -webkit-user-select: none;
 }
 .ha [hidden] { display: none !important; }
 
-.ha-kopf { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--a1) var(--a3); }
-.ha-geld { font-size: 1.7rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.ha-einheit { font-size: 1rem; font-weight: 500; color: var(--text-leise); }
-.ha-rate { font-size: .9rem; }
-
-.ha-lager { display: grid; gap: var(--a1); }
-.ha-lager-txt { font-size: .85rem; color: var(--text-leise); font-variant-numeric: tabular-nums; }
-.ha-balken {
-  position: relative; display: block; height: 12px; overflow: hidden;
-  border: 2px solid var(--text); border-radius: var(--radius-klein); background: var(--flaeche-2);
+/* Feste Leiste: bleibt beim Scrollen unter der Kopfleiste stehen */
+.ha-leiste {
+  position: sticky; top: var(--ha-oben); z-index: 4;
+  display: grid; gap: var(--a1);
+  padding: var(--a2) var(--a3);
+  border: 1px solid var(--rand); border-radius: var(--radius);
+  background: var(--flaeche); box-shadow: var(--schatten);
 }
-.ha-fuell { display: block; height: 100%; width: 0; background: var(--akzent); transition: width 200ms linear; }
-.ha-balken.voll .ha-fuell { background: var(--fehler); }
-.ha-still .ha-fuell { transition: none; }
-
-.ha-ziel {
-  display: grid; grid-template-columns: 1fr auto; gap: var(--a1) var(--a3); align-items: center;
-  padding: var(--a3); border: 1px solid var(--rand); border-radius: var(--radius);
-  background: var(--akzent-sanft);
-}
-.ha-ziel-titel { grid-column: 1 / -1; font-size: .8rem; font-weight: 600; letter-spacing: .02em; color: var(--text-leise); }
-.ha-ziel-text { font-size: .95rem; min-width: 0; overflow-wrap: anywhere; }
+.ha-leiste-oben { display: flex; align-items: baseline; justify-content: space-between; gap: var(--a3); }
+.ha-geld { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ha-einheit { font-size: .9rem; font-weight: 500; color: var(--text-leise); }
+.ha-rate { font-size: .95rem; font-weight: 600; color: var(--akzent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ha-leiste-ziel { display: flex; align-items: center; gap: var(--a2); min-width: 0; }
+.ha-ziel-titel { font-size: .75rem; font-weight: 600; letter-spacing: .02em; color: var(--text-leise); }
+.ha-ziel-text { flex: 1; min-width: 0; font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ha-ziel-knopf { min-height: 32px; padding-block: 0; }
 .ha-ziel-knopf[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
 .ha-ziel-knopf.bereit { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); }
 
@@ -43,10 +39,46 @@
 }
 .ha-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; }
 
+/* Karten */
+.ha-karte {
+  display: grid; gap: var(--a2);
+  padding: var(--a3);
+  border: 1px solid var(--rand); border-radius: var(--radius);
+  background: var(--flaeche); box-shadow: var(--schatten);
+}
+.ha-ebene { border-left: 5px solid var(--ha-farbe, var(--akzent)); }
+.ha-ebenen { display: grid; gap: var(--a3); }
+.ha-titel { margin: 0; font-size: 1rem; font-weight: 650; display: flex; align-items: center; gap: var(--a1); }
+.ha-zeile-info { font-size: .82rem; color: var(--text-leise); font-variant-numeric: tabular-nums; }
+.ha-symbol { width: 14px; height: 14px; fill: var(--ha-farbe); stroke: var(--text); stroke-width: .5; }
+.ha-symbol-halter { display: inline-flex; }
+
+.ha-ebene-kopf { display: flex; align-items: center; gap: var(--a3); }
+.ha-ebene-titel { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.ha-ertrag { font-weight: 700; color: var(--akzent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ha-badge {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--text); box-sizing: border-box;
+}
+.ha-icon { width: 24px; height: 24px; fill: var(--text); }
+
+/* Mengen: Name · Balken · Zahl (feste Breiten, damit nichts springt) */
+.ha-messer-liste { display: grid; gap: var(--a1); }
+.ha-messer { display: grid; grid-template-columns: 5.6rem minmax(0, 1fr) 7.6rem; align-items: center; gap: var(--a2); font-size: .82rem; }
+.ha-messer-name { color: var(--text-leise); }
+.ha-zahl { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ha-balken {
+  position: relative; display: block; height: 10px; overflow: hidden;
+  border: 2px solid var(--text); border-radius: var(--radius-klein); background: var(--flaeche-2); box-sizing: content-box;
+}
+.ha-fuell { display: block; height: 100%; width: 0; background: var(--ha-farbe, var(--akzent)); transition: width 200ms linear; }
+.ha-messer.voll .ha-fuell { background: var(--fehler); }
+.ha-still .ha-fuell { transition: none; }
+
 /* Szene */
 .ha-szene {
-  position: relative; height: 130px; overflow: hidden;
-  border: 1px solid var(--rand); border-radius: var(--radius);
+  position: relative; height: 110px; overflow: hidden;
+  border: 1px solid var(--rand); border-radius: var(--radius-klein);
   background: linear-gradient(to bottom, var(--akzent-sanft) 0 62%, var(--flaeche-2) 62% 100%);
 }
 .ha-welle {
@@ -55,50 +87,25 @@
   background-size: 24px 22px; opacity: .55;
   animation: ha-wogen 9s linear infinite;
 }
-.ha-welle-1 { bottom: 30px; }
-.ha-welle-2 { bottom: 8px; animation-duration: 13s; animation-direction: reverse; opacity: .35; }
+.ha-welle-1 { bottom: 26px; }
+.ha-welle-2 { bottom: 6px; animation-duration: 13s; animation-direction: reverse; opacity: .35; }
 @keyframes ha-wogen { to { transform: translateX(24px); } }
-.ha-turm { position: absolute; left: 14px; bottom: 6px; height: 112px; width: auto; }
+.ha-turm { position: absolute; left: 14px; bottom: 4px; height: 98px; width: auto; }
 .ha-turm-leib { fill: var(--flaeche); stroke: var(--text); stroke-width: 1.2; stroke-linejoin: round; }
 .ha-turm-streifen { fill: var(--fehler); stroke: var(--text); stroke-width: .8; }
 .ha-turm-lampe { fill: var(--erfolg); stroke: var(--text); stroke-width: 1; }
 .ha-turm-dach { fill: var(--text); }
 .ha-turm-sockel { fill: var(--text-leise); }
 .ha-strahl {
-  position: absolute; left: 44px; top: 16px; height: 34px; width: calc(60% * var(--reichweite, .5));
+  position: absolute; left: 40px; top: 12px; height: 30px; width: calc(60% * var(--reichweite, .5));
   background: linear-gradient(to right, var(--erfolg), transparent);
   clip-path: polygon(0 40%, 100% 0, 100% 100%, 0 60%);
-  opacity: .5; transform-origin: left center;
   animation: ha-leuchten 5s ease-in-out infinite;
 }
 @keyframes ha-leuchten { 0%, 100% { opacity: .18; } 50% { opacity: .6; } }
-.ha-turm-info {
-  position: absolute; right: var(--a3); top: var(--a2);
-  font-size: .8rem; font-weight: 600; color: var(--text-leise);
-}
+.ha-turm-info { position: absolute; right: var(--a3); top: var(--a2); font-size: .8rem; font-weight: 600; color: var(--text-leise); }
 
-/* Docks */
-.ha-docks { display: grid; gap: var(--a2); }
-.ha-dock, .ha-gruppe {
-  display: grid; gap: var(--a2);
-  padding: var(--a3);
-  border: 1px solid var(--rand); border-radius: var(--radius);
-  background: var(--flaeche); box-shadow: var(--schatten);
-}
-.ha-dock-kopf { display: flex; align-items: center; justify-content: space-between; gap: var(--a2); min-width: 0; }
-.ha-titel { margin: 0; font-size: 1rem; font-weight: 650; }
-.ha-zeile-info { font-size: .85rem; color: var(--text-leise); font-variant-numeric: tabular-nums; }
-.ha-dock-fuss { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--a1) var(--a3); }
-.ha-fracht {
-  display: inline-flex; align-items: center; gap: var(--a2);
-  min-height: 36px; padding: var(--a1) var(--a3);
-  font: inherit; font-size: .9rem; color: var(--text);
-  border: 1px solid var(--rand); border-radius: 999px; background: var(--flaeche-2); cursor: pointer;
-}
-.ha-fracht[aria-disabled="true"] { cursor: default; }
-.ha-fracht-punkt { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--text); box-sizing: border-box; }
-.ha-symbol { width: 14px; height: 14px; fill: var(--text); }
-
+/* Dock mit Schiff */
 .ha-see {
   position: relative; height: 56px; overflow: hidden;
   border-radius: var(--radius-klein); border: 1px solid var(--rand);
@@ -108,10 +115,7 @@
   position: absolute; left: 0; top: 0; bottom: 0; width: 12px;
   background: repeating-linear-gradient(to bottom, var(--text-leise) 0 6px, var(--rand) 6px 12px);
 }
-.ha-kran {
-  position: absolute; left: 12px; top: 6px; width: 30px; height: 4px;
-  background: var(--text); border-radius: 2px;
-}
+.ha-kran { position: absolute; left: 12px; top: 6px; width: 30px; height: 4px; background: var(--text); border-radius: 2px; }
 .ha-schiff {
   --sw: 72px; --x: 1;
   position: absolute; bottom: 8px; width: var(--sw); height: 38px; padding: 0;
@@ -124,33 +128,35 @@
   background: var(--flaeche); border: 2px solid var(--text); border-radius: 3px 3px 18px 18px / 3px 3px 14px 14px;
   overflow: hidden; box-sizing: border-box;
 }
-.ha-ladung { position: absolute; left: 0; right: 0; bottom: 0; height: 100%; opacity: .75; transition: height 200ms linear; }
+.ha-ladung { position: absolute; left: 0; right: 0; bottom: 0; height: 100%; opacity: .8; transition: height 200ms linear; }
 .ha-mast { position: absolute; left: 34px; bottom: 24px; width: 3px; height: 14px; background: var(--text); }
-.ha-schiff:focus-visible, .ha-fracht:focus-visible, .ha .knopf:focus-visible, .ha-kauf:focus-visible { outline: 3px solid var(--fokus); outline-offset: 2px; }
+.ha-phase { margin-top: calc(-1 * var(--a1)); }
+.ha-schiff:focus-visible, .ha .knopf:focus-visible, .ha-kauf:focus-visible { outline: 3px solid var(--fokus); outline-offset: 2px; }
 .ha-still .ha-schiff, .ha-still .ha-ladung { transition: none; }
 .ha-still .ha-welle, .ha-still .ha-strahl { animation: none; }
 .ha-still .ha-strahl { opacity: .35; }
 
-/* Kaufknöpfe */
-.ha-upgrades { display: grid; gap: var(--a2); }
+/* Kaufknöpfe an der Station: Name, Wirkung, Stufe + Preis */
 .ha-knoepfe { display: grid; gap: var(--a2); }
-.ha-knoepfe.drei { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .ha-knoepfe.zwei { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .ha-kauf {
-  display: grid; gap: 2px; justify-items: center; align-content: center;
-  min-height: var(--treffer); padding: var(--a2) var(--a1);
-  font: inherit; color: var(--text); text-align: center;
+  display: grid; gap: 2px; align-content: center; justify-items: stretch;
+  min-height: var(--treffer); padding: var(--a2);
+  font: inherit; color: var(--text); text-align: left;
   border: 1px solid var(--rand); border-radius: var(--radius-klein);
   background: var(--flaeche-2); cursor: pointer;
 }
-.ha-kauf-name { font-size: .8rem; font-weight: 600; }
+.ha-kauf-name { font-size: .82rem; font-weight: 650; }
+.ha-kauf-wirkung { font-size: .74rem; color: var(--text-leise); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ha-kauf-zeile { display: flex; justify-content: space-between; align-items: baseline; gap: var(--a1); }
 .ha-kauf-stufe { font-size: .72rem; color: var(--text-leise); }
-.ha-kauf-preis { font-size: .9rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.ha-kauf[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
+.ha-kauf-preis { margin-left: auto; font-size: .95rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ha-kauf[aria-disabled="true"] { opacity: .6; cursor: not-allowed; }
 .ha-kauf.bereit { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); }
-.ha-kauf.bereit .ha-kauf-stufe { color: inherit; opacity: .85; }
+.ha-kauf.bereit .ha-kauf-wirkung, .ha-kauf.bereit .ha-kauf-stufe { color: inherit; opacity: .9; }
 .ha-kauf.blitz { outline: 3px solid var(--erfolg); outline-offset: 1px; }
-.ha-neues-dock { width: 100%; border-style: dashed; padding: var(--a3); font-weight: 600; }
+.ha-neue-ebene { width: 100%; border-style: dashed; padding: var(--a3); }
+.ha-neue-ebene .ha-kauf-name { font-size: .95rem; }
 .ha-fuss { display: flex; justify-content: center; padding-top: var(--a3); }
 
 @media (prefers-reduced-motion: reduce) {
@@ -158,7 +164,9 @@
   .ha-schiff, .ha-ladung, .ha-fuell { transition: none; }
 }
 @media (max-width: 400px) {
-  .ha-dock, .ha-gruppe { padding: var(--a2); }
+  .ha-karte { padding: var(--a2); }
   .ha-schiff { --sw: 60px; }
   .ha-mast { left: 28px; }
+  .ha-messer { grid-template-columns: 4.8rem minmax(0, 1fr) 6.6rem; gap: var(--a1); }
+  .ha-geld { font-size: 1.35rem; }
 }

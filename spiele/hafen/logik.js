@@ -1,7 +1,9 @@
-// Hafen: Rechenkern (ohne DOM, ohne Zufall). Fließmodell: Schiffe laufen ein, Kräne entladen,
-// das Lager verkauft. Alles ist eine reine Funktion des Zustands und der verstrichenen Sekunden.
+// Hafen: Rechenkern (ohne DOM, ohne Zufall, ohne Uhr). Fließmodell mit Puffern:
+// Schiff -> Kran -> Ebenenlager -> Lader -> Hauptlager -> Verkauf -> Münzen.
+// Jede Ebene ist eine eigene Ressource mit eigenem Dock; die nächste Ebene wird gekauft.
+// Alles ist eine reine Funktion des Zustands und der verstrichenen Sekunden.
 
-export const MAX_DOCKS = 6;
+export const MAX_EBENEN = 8;
 export const MAX_STUFE = 40;
 export const MAX_GELD = 1e30;
 export const OFFLINE_MAX_S = 8 * 3600;   // Deckel der Abwesenheit
@@ -10,74 +12,77 @@ export const OFFLINE_FAKTOR = 0.5;       // danach nur die Hälfte
 export const MAX_SCHRITTE = 600;
 export const ANSCHUB_ANTEIL = 0.02;      // Schub beim Antippen (Anteil einer Fahrt)
 export const ANSCHUB_PAUSE_S = 1.5;
-const MAX_ZEIT_MS = 4e12;                // ~ Jahr 2096
+export const STAND_VERSION = 2;
+const MAX_ZEIT_MS = 4e12;
 const ZUKUNFT_MS = 24 * 3600 * 1000;     // so weit darf ein Zeitstempel in der Zukunft liegen
+const EBENEN_FAKTOR = 5;                 // Kosten der Upgrades steigen je Ebene um diesen Faktor
 
-/** Frachtarten: Wert je Einheit, Mengenfaktor je Schiff, Krantempo-Faktor, nötige Leuchtturm-Stufe */
-export const FRACHT = [
-  { id: 'holz', name: 'Holz', wert: 1, menge: 1, kran: 1, turm: 1 },
-  { id: 'fisch', name: 'Fisch', wert: 2, menge: 0.8, kran: 0.9, turm: 4 },
-  { id: 'erz', name: 'Erz', wert: 4, menge: 0.65, kran: 0.8, turm: 8 },
+/** Ressourcen der Ebenen: Wert je Einheit */
+export const EBENEN = [
+  { id: 'holz', name: 'Holz', wert: 1 },
+  { id: 'fisch', name: 'Fisch', wert: 3 },
+  { id: 'erz', name: 'Erz', wert: 9 },
+  { id: 'kohle', name: 'Kohle', wert: 27 },
+  { id: 'stoffe', name: 'Stoffe', wert: 81 },
+  { id: 'gewuerze', name: 'Gewürze', wert: 243 },
+  { id: 'porzellan', name: 'Porzellan', wert: 729 },
+  { id: 'perlen', name: 'Perlen', wert: 2187 },
 ];
 
-/** Kosten: basis · wachs^(stufe−1) */
+/** Kosten: basis · wachs^(stufe−1) (· EBENEN_FAKTOR^ebene bei Ebenen-Upgrades) */
 const KOSTEN = {
-  dock: { basis: 150, wachs: 3.5 },
-  kranTempo: { basis: 12, wachs: 1.22 },
-  kranKap: { basis: 20, wachs: 1.24 },
-  halle: { basis: 25, wachs: 1.22 },
-  schiffGroesse: { basis: 15, wachs: 1.2 },
-  schiffHaeufig: { basis: 18, wachs: 1.23 },
-  turm: { basis: 40, wachs: 1.28 },
+  kran: { basis: 12, wachs: 1.2 },
+  schiff: { basis: 15, wachs: 1.2 },
+  lager: { basis: 10, wachs: 1.18 },
   lotse: { basis: 70, wachs: 1 },
+  halle: { basis: 30, wachs: 1.28 },
+  turm: { basis: 80, wachs: 1.28 },
 };
+const EBENE_BASIS = 60;                  // Preis der 2. Ebene
+const EBENE_WACHS = 4;                   // Preisfaktor je weitere Ebene
 
 export const BEZEICHNUNG = {
-  dock: 'Neues Dock',
-  'kran:tempo': 'Kräne: Tempo',
-  'kran:kap': 'Kräne: Kapazität',
-  halle: 'Lagerhalle',
-  'schiff:groesse': 'Schiffe: Größe',
-  'schiff:haeufig': 'Schiffe: Häufigkeit',
-  turm: 'Leuchtturm',
-  lotse: 'Lotsenboot',
+  kran: 'Kran', schiff: 'Schiffe', lager: 'Ebenenlager', lotse: 'Lotsenboot',
+  halle: 'Verkaufshalle', turm: 'Leuchtturm', ebene: 'Neue Ebene',
 };
-export const ALLE_KAEUFE = Object.keys(BEZEICHNUNG);
 
 const ZAHL = (x) => typeof x === 'number' && Number.isFinite(x);
 const GANZ = (x, a, b) => ZAHL(x) && Number.isInteger(x) && x >= a && x <= b;
 
 // ---------- Formeln ----------
-export const krGeschwindigkeit = (z, f) => 1.0 * (1 + 0.20 * (z.kran.tempo - 1)) * (1 + 0.15 * (z.kran.kap - 1)) * FRACHT[f].kran;
-export const schiffGroesse = (z, f) => 10 * (1 + 0.15 * (z.schiff.groesse - 1)) * (1 + 0.05 * (z.turm - 1)) * FRACHT[f].menge;
-export const anlegenZeit = (z) => (z.lotse ? 1.5 : 4) / (1 + 0.03 * (z.turm - 1));
-/** Wartezeit auf das nächste Schiff am Dock (s) */
-export const wartezeit = (z) => 7 / ((1 + 0.15 * (z.schiff.haeufig - 1)) * (1 + 0.08 * (z.turm - 1)));
-export const lagerKap = (z) => 40 * (1 + 0.25 * (z.halle - 1));
-export const verkaufsRate = (z) => 3 * (1 + 0.3 * (z.halle - 1));
-export const entladeZeit = (z, f) => schiffGroesse(z, f) / krGeschwindigkeit(z, f);
-export const zyklusZeit = (z, f) => anlegenZeit(z) + entladeZeit(z, f) + wartezeit(z);
-export const lagerSumme = (z) => z.lager[0] + z.lager[1] + z.lager[2];
-export const frachtFrei = (z, f) => z.turm >= FRACHT[f].turm;
-export const besteFracht = (z) => (z.turm >= FRACHT[2].turm ? 2 : z.turm >= FRACHT[1].turm ? 1 : 0);
+export const kranRate = (e) => 1.0 * (1 + 0.2 * (e.kran - 1));
+export const schiffGroesse = (z, i) => 10 * (1 + 0.12 * (z.ebenen[i].schiff - 1)) * (1 + 0.05 * (z.turm - 1));
+export const anlegenZeit = (z, i) => (z.ebenen[i].lotse ? 1.5 : 4) / (1 + 0.03 * (z.turm - 1));
+/** Wartezeit auf das nächste Schiff (s) */
+export const wartezeit = (z, i) => 7 / ((1 + 0.08 * (z.ebenen[i].schiff - 1)) * (1 + 0.08 * (z.turm - 1)));
+export const entladeZeit = (z, i) => schiffGroesse(z, i) / kranRate(z.ebenen[i]);
+export const zyklusZeit = (z, i) => anlegenZeit(z, i) + entladeZeit(z, i) + wartezeit(z, i);
+/** Ware, die das Dock dieser Ebene je Sekunde anliefert (Einheiten/s) */
+export const anlieferung = (z, i) => schiffGroesse(z, i) / zyklusZeit(z, i);
+export const ebenenKap = (e) => 20 * (1 + 0.25 * (e.lager - 1));
+export const ladeRate = (e) => 0.6 * (1 + 0.25 * (e.lager - 1));
+export const hallenKap = (z) => 60 * (1 + 0.25 * (z.halle - 1));
+export const verkaufsRate = (z) => 1 * (1 + 0.5 * (z.halle - 1));
+export const hauptSumme = (z) => z.haupt.reduce((a, b) => a + b, 0);
+export const puffer = (z) => z.ebenen.reduce((a, e) => a + e.puffer, 0);
 
-/** Anteil der Zykluszeit, in dem das Schiff entladen wird: [von, bis) der Phase p; davor Anfahrt, danach Ablegen */
-export function phasen(z, f) {
-  const T = zyklusZeit(z, f);
-  const an = anlegenZeit(z) + wartezeit(z) * 0.6;
-  const ent = entladeZeit(z, f);
-  const von = an / T;
-  const bis = (an + ent) / T;
-  return { von, bis };
+/** Phasen des Schiffs (Anteil an der Zykluszeit): bis `von` Anfahrt, bis `bis` Entladen, danach Ablegen */
+export function phasen(z, i) {
+  const T = zyklusZeit(z, i);
+  const an = anlegenZeit(z, i) + wartezeit(z, i) * 0.6;
+  return { von: an / T, bis: (an + entladeZeit(z, i)) / T };
 }
 
 // ---------- Zustand ----------
+function neueEbene(n) {
+  return { kran: 1, schiff: 1, lager: 1, lotse: 0, p: (n * 0.37) % 1, puffer: 0 };
+}
+
 export function neuerHafen(jetztMs) {
   return {
-    v: 1, t: sichereZeit(jetztMs), uhr: 0, sperre: 0, geld: 0, gesamt: 0,
-    docks: [{ f: 0, p: 0 }],
-    kran: { tempo: 1, kap: 1 }, halle: 1, schiff: { groesse: 1, haeufig: 1 }, turm: 1, lotse: 0,
-    lager: [0, 0, 0],
+    v: STAND_VERSION, t: sichereZeit(jetztMs), uhr: 0, sperre: 0, geld: 0, gesamt: 0,
+    ebenen: [neueEbene(0)], halle: 1, turm: 1,
+    haupt: new Array(MAX_EBENEN).fill(0),
   };
 }
 
@@ -87,15 +92,14 @@ function sichereZeit(t) {
 
 function kopie(z) {
   return {
-    v: 1, t: z.t, uhr: z.uhr, sperre: z.sperre, geld: z.geld, gesamt: z.gesamt,
-    docks: z.docks.map((d) => ({ f: d.f, p: d.p })),
-    kran: { tempo: z.kran.tempo, kap: z.kran.kap }, halle: z.halle,
-    schiff: { groesse: z.schiff.groesse, haeufig: z.schiff.haeufig }, turm: z.turm, lotse: z.lotse,
-    lager: [z.lager[0], z.lager[1], z.lager[2]],
+    v: STAND_VERSION, t: z.t, uhr: z.uhr, sperre: z.sperre, geld: z.geld, gesamt: z.gesamt,
+    ebenen: z.ebenen.map((e) => ({ kran: e.kran, schiff: e.schiff, lager: e.lager, lotse: e.lotse, p: e.p, puffer: e.puffer })),
+    halle: z.halle, turm: z.turm,
+    haupt: z.haupt.slice(),
   };
 }
 
-/** Streng prüfen: gibt true nur für einen vollständig gültigen Spielstand */
+/** Streng prüfen: true nur für einen vollständig gültigen Spielstand */
 export function istGueltig(s) {
   try { pruefe(s); return true; } catch { return false; }
 }
@@ -103,31 +107,30 @@ export function istGueltig(s) {
 function pruefe(s) {
   const fehler = (m) => { throw new Error(`Ungültiger Spielstand: ${m}`); };
   if (!s || typeof s !== 'object' || Array.isArray(s)) fehler('kein Objekt');
-  if (s.v !== 1) fehler('Version');
+  if (s.v !== STAND_VERSION) fehler('Version');
   if (!ZAHL(s.t) || s.t < 0 || s.t > MAX_ZEIT_MS) fehler('t');
   if (!ZAHL(s.uhr) || s.uhr < 0 || s.uhr > 1e12) fehler('uhr');
   if (!ZAHL(s.sperre) || s.sperre < 0 || s.sperre > ANSCHUB_PAUSE_S) fehler('sperre');
   if (!ZAHL(s.geld) || s.geld < 0 || s.geld > MAX_GELD) fehler('geld');
   if (!ZAHL(s.gesamt) || s.gesamt < 0 || s.gesamt > MAX_GELD) fehler('gesamt');
-  if (!Array.isArray(s.docks) || s.docks.length < 1 || s.docks.length > MAX_DOCKS) fehler('docks');
-  if (!s.kran || typeof s.kran !== 'object' || !GANZ(s.kran.tempo, 1, MAX_STUFE) || !GANZ(s.kran.kap, 1, MAX_STUFE)) fehler('kran');
-  if (!s.schiff || typeof s.schiff !== 'object' || !GANZ(s.schiff.groesse, 1, MAX_STUFE) || !GANZ(s.schiff.haeufig, 1, MAX_STUFE)) fehler('schiff');
   if (!GANZ(s.halle, 1, MAX_STUFE)) fehler('halle');
   if (!GANZ(s.turm, 1, MAX_STUFE)) fehler('turm');
-  if (!GANZ(s.lotse, 0, 1)) fehler('lotse');
-  for (const d of s.docks) {
-    if (!d || typeof d !== 'object' || !GANZ(d.f, 0, FRACHT.length - 1)) fehler('dock.f');
-    if (!ZAHL(d.p) || d.p < 0 || d.p >= 1) fehler('dock.p');
-    if (s.turm < FRACHT[d.f].turm) fehler('Fracht nicht freigeschaltet');
+  if (!Array.isArray(s.ebenen) || s.ebenen.length < 1 || s.ebenen.length > MAX_EBENEN) fehler('ebenen');
+  for (const e of s.ebenen) {
+    if (!e || typeof e !== 'object' || Array.isArray(e)) fehler('ebene');
+    for (const k of ['kran', 'schiff', 'lager']) if (!GANZ(e[k], 1, MAX_STUFE)) fehler(`ebene.${k}`);
+    if (!GANZ(e.lotse, 0, 1)) fehler('ebene.lotse');
+    if (!ZAHL(e.p) || e.p < 0 || e.p >= 1) fehler('ebene.p');
+    if (!ZAHL(e.puffer) || e.puffer < 0 || e.puffer > ebenenKap(e) * 1.001 + 1e-6) fehler('ebene.puffer');
   }
-  if (!Array.isArray(s.lager) || s.lager.length !== 3) fehler('lager');
-  const kap = lagerKap({ halle: s.halle });
+  if (!Array.isArray(s.haupt) || s.haupt.length !== MAX_EBENEN) fehler('haupt');
   let summe = 0;
-  for (const x of s.lager) {
-    if (!ZAHL(x) || x < 0 || x > MAX_GELD) fehler('lager');
+  s.haupt.forEach((x, i) => {
+    if (!ZAHL(x) || x < 0 || x > MAX_GELD) fehler('haupt');
+    if (i >= s.ebenen.length && x !== 0) fehler('haupt ohne Ebene');
     summe += x;
-  }
-  if (summe > kap * 1.001 + 1e-6) fehler('Lager über Kapazität');
+  });
+  if (summe > hallenKap({ halle: s.halle }) * 1.001 + 1e-6) fehler('Hauptlager über Kapazität');
 }
 
 /** Spielstand aus dem Speicher: gültig → saubere Kopie ohne Zusatzfelder, sonst Fehler */
@@ -144,6 +147,16 @@ export function zumSpeichern(z, jetztMs) {
 }
 
 // ---------- Simulation ----------
+/** Wie viel vom Entladefenster [von, bis) wird beim Vorrücken der Phase von p um dp durchlaufen (dp darf > 1 sein) */
+function ueberlapp(p, dp, von, bis) {
+  const ganz = Math.floor(dp);
+  const rest = dp - ganz;
+  const teil = (x0, x1) => Math.max(0, Math.min(x1, bis) - Math.max(x0, von));
+  let o = ganz * (bis - von) + teil(p, p + rest);
+  if (p + rest > 1) o += teil(0, p + rest - 1);
+  return o;
+}
+
 /**
  * Rechnet dt Sekunden weiter. Rein und deterministisch, liefert einen neuen Zustand.
  * Große dt kosten höchstens MAX_SCHRITTE Schritte.
@@ -153,38 +166,56 @@ export function fortschritt(z, dt) {
   if (!ZAHL(dt) || dt <= 0) return c;
   const n = Math.min(MAX_SCHRITTE, Math.max(1, Math.ceil(dt / 0.5)));
   const h = dt / n;
-  const kap = lagerKap(c);
+  const N = c.ebenen.length;
+  const T = c.ebenen.map((_, i) => zyklusZeit(c, i));
+  const ph = c.ebenen.map((_, i) => phasen(c, i));
+  const S = c.ebenen.map((_, i) => schiffGroesse(c, i));
+  const kapE = c.ebenen.map(ebenenKap);
+  const lade = c.ebenen.map(ladeRate);
+  const kapH = hallenKap(c);
   const rate = verkaufsRate(c);
-  const D = c.docks.length;
-  const T = c.docks.map((d) => zyklusZeit(c, d.f));
-  const S = c.docks.map((d) => schiffGroesse(c, d.f));
   for (let schritt = 0; schritt < n; schritt++) {
-    let geliefert = 0;
-    for (let i = 0; i < D; i++) geliefert += (h / T[i]) * S[i];
-    const frei = Math.max(0, kap - lagerSumme(c)) + rate * h;
-    const k = geliefert > frei ? frei / geliefert : 1;
-    for (let i = 0; i < D; i++) {
-      const dp = (h / T[i]) * k;
-      const d = c.docks[i];
-      c.lager[d.f] += dp * S[i];
-      d.p += dp;
-      d.p -= Math.floor(d.p);
+    // 1. Schiffe entladen in das Ebenenlager (der Lader leert es gleichzeitig)
+    for (let i = 0; i < N; i++) {
+      const e = c.ebenen[i];
+      const dp = h / T[i];
+      // Ware kommt nur im Entladefenster des Schiffs (stoßweise), mit Kranleistung
+      const ein = (ueberlapp(e.p, dp, ph[i].von, ph[i].bis) / (ph[i].bis - ph[i].von)) * S[i];
+      const frei = Math.max(0, kapE[i] - e.puffer) + lade[i] * h;
+      const k = ein > frei ? frei / ein : 1;
+      e.puffer += ein * k;
+      e.p += dp * k;
+      e.p -= Math.floor(e.p);
     }
-    // Verkauf: wertvollste Fracht zuerst
+    // 2. Lader bringen die Ware ins Hauptlager (begrenzt durch freien Platz, Verkauf läuft gleichzeitig)
+    const freiH = Math.max(0, kapH - hauptSumme(c)) + rate * h;
+    let will = 0;
+    const w = c.ebenen.map((e, i) => { const x = Math.min(e.puffer, lade[i] * h); will += x; return x; });
+    const f = will > freiH ? freiH / will : 1;
+    for (let i = 0; i < N; i++) {
+      const m = w[i] * f;
+      c.ebenen[i].puffer -= m;
+      c.haupt[i] += m;
+    }
+    // 3. Verkauf: wertvollste Ware zuerst
     let rest = rate * h;
-    for (let f = FRACHT.length - 1; f >= 0 && rest > 0; f--) {
-      const m = Math.min(c.lager[f], rest);
-      c.lager[f] -= m;
+    for (let i = N - 1; i >= 0 && rest > 0; i--) {
+      const m = Math.min(c.haupt[i], rest);
+      c.haupt[i] -= m;
       rest -= m;
-      c.geld += m * FRACHT[f].wert;
-      c.gesamt += m * FRACHT[f].wert;
+      c.geld += m * EBENEN[i].wert;
+      c.gesamt += m * EBENEN[i].wert;
     }
   }
   c.uhr = Math.min(c.uhr + dt, 1e12);
   c.sperre = Math.max(0, c.sperre - dt);
   c.geld = Math.min(c.geld, MAX_GELD);
   c.gesamt = Math.min(c.gesamt, MAX_GELD);
-  for (let f = 0; f < 3; f++) c.lager[f] = Math.min(Math.max(c.lager[f], 0), kap);
+  for (let i = 0; i < N; i++) c.ebenen[i].puffer = Math.min(Math.max(c.ebenen[i].puffer, 0), kapE[i]);
+  // Hauptlager auf Kapazität begrenzen (Rundungsreste)
+  const sum = hauptSumme(c);
+  if (sum > kapH) { const q = kapH / sum; for (let i = 0; i < MAX_EBENEN; i++) c.haupt[i] *= q; }
+  for (let i = 0; i < MAX_EBENEN; i++) c.haupt[i] = Math.max(0, c.haupt[i]);
   return c;
 }
 
@@ -212,51 +243,70 @@ export function zeitPlausibel(z, jetztMs) {
 }
 
 // ---------- Einkommen ----------
-/** Gleichgewichts-Einkommen (Münzen/s): Produktion je Fracht, Verkauf teuerste zuerst */
-export function einkommen(z) {
-  const prod = [0, 0, 0];
-  for (const d of z.docks) prod[d.f] += schiffGroesse(z, d.f) / zyklusZeit(z, d.f);
+/** Einkommen je Ebene im Gleichgewicht (Münzen/s) und Gesamteinkommen (Verkauf teuerste zuerst) */
+export function einkommenDetail(z) {
+  const fluss = z.ebenen.map((e, i) => Math.min(anlieferung(z, i), ladeRate(e)));
+  const je = new Array(z.ebenen.length).fill(0);
   let rest = verkaufsRate(z);
-  let summe = 0;
-  for (let f = FRACHT.length - 1; f >= 0 && rest > 0; f--) {
-    const m = Math.min(prod[f], rest);
+  for (let i = z.ebenen.length - 1; i >= 0 && rest > 0; i--) {
+    const m = Math.min(fluss[i], rest);
     rest -= m;
-    summe += m * FRACHT[f].wert;
+    je[i] = m * EBENEN[i].wert;
   }
-  return summe;
+  return { je, gesamt: je.reduce((a, b) => a + b, 0), fluss };
 }
+export const einkommen = (z) => einkommenDetail(z).gesamt;
 
 // ---------- Käufe ----------
+const EBENEN_KATEGORIEN = ['kran', 'schiff', 'lager', 'lotse'];
+const SCHLUESSEL = /^e([0-7]):(kran|schiff|lager|lotse)$/;
+
+/** Alle Kaufschlüssel, die es im Zustand gibt */
+export function alleKaeufe(z) {
+  const l = [];
+  z.ebenen.forEach((_, i) => { for (const k of EBENEN_KATEGORIEN) l.push(`e${i}:${k}`); });
+  l.push('ebene', 'halle', 'turm');
+  return l;
+}
+
 function stufeVon(z, was) {
-  switch (was) {
-    case 'dock': return { art: 'dock', stufe: z.docks.length, max: MAX_DOCKS };
-    case 'kran:tempo': return { art: 'kranTempo', stufe: z.kran.tempo, max: MAX_STUFE };
-    case 'kran:kap': return { art: 'kranKap', stufe: z.kran.kap, max: MAX_STUFE };
-    case 'halle': return { art: 'halle', stufe: z.halle, max: MAX_STUFE };
-    case 'schiff:groesse': return { art: 'schiffGroesse', stufe: z.schiff.groesse, max: MAX_STUFE };
-    case 'schiff:haeufig': return { art: 'schiffHaeufig', stufe: z.schiff.haeufig, max: MAX_STUFE };
-    case 'turm': return { art: 'turm', stufe: z.turm, max: MAX_STUFE };
-    case 'lotse': return { art: 'lotse', stufe: z.lotse + 1, max: 2 };
-    default: return null;
-  }
+  if (was === 'ebene') return { art: 'ebene', stufe: z.ebenen.length, max: MAX_EBENEN };
+  if (was === 'halle') return { art: 'halle', stufe: z.halle, max: MAX_STUFE };
+  if (was === 'turm') return { art: 'turm', stufe: z.turm, max: MAX_STUFE };
+  const m = typeof was === 'string' ? SCHLUESSEL.exec(was) : null;
+  if (!m) return null;
+  const i = Number(m[1]);
+  if (i >= z.ebenen.length) return null;
+  const art = m[2];
+  const e = z.ebenen[i];
+  return art === 'lotse'
+    ? { art, i, stufe: e.lotse + 1, max: 2 }
+    : { art, i, stufe: e[art], max: MAX_STUFE };
 }
 
 /** Preis des Kaufs oder null (unbekannt / schon am Maximum) */
 export function preis(z, was) {
-  const i = stufeVon(z, was);
-  if (!i || i.stufe >= i.max) return null;
-  const k = KOSTEN[i.art];
-  return Math.max(1, Math.round(k.basis * k.wachs ** (i.stufe - 1)));
+  const s = stufeVon(z, was);
+  if (!s || s.stufe >= s.max) return null;
+  if (s.art === 'ebene') return Math.round(EBENE_BASIS * EBENE_WACHS ** (s.stufe - 1));
+  const k = KOSTEN[s.art];
+  const mal = s.i === undefined ? 1 : EBENEN_FAKTOR ** s.i;
+  return Math.max(1, Math.round(k.basis * k.wachs ** (s.stufe - 1) * mal));
 }
 
-/** Stufe des Kaufs für die Anzeige */
+/** Angezeigte Stufe */
 export function stufe(z, was) {
-  const i = stufeVon(z, was);
-  if (!i) return 0;
-  return was === 'lotse' ? z.lotse : i.stufe;
+  const s = stufeVon(z, was);
+  if (!s) return 0;
+  return s.art === 'lotse' ? s.stufe - 1 : s.stufe;
 }
 
-export const bezeichnung = (was) => BEZEICHNUNG[was] ?? String(was);
+/** Name des Kaufs, z. B. „Holz: Kran“ */
+export function bezeichnung(was) {
+  if (BEZEICHNUNG[was]) return BEZEICHNUNG[was];
+  const m = typeof was === 'string' ? SCHLUESSEL.exec(was) : null;
+  return m ? `${EBENEN[Number(m[1])].name}: ${BEZEICHNUNG[m[2]]}` : String(was);
+}
 
 /** Kauf ausführen: { ok, zustand, preis } oder { ok:false, grund } (Eingabe bleibt unverändert) */
 export function kaufe(z, was) {
@@ -265,38 +315,48 @@ export function kaufe(z, was) {
   if (z.geld < p) return { ok: false, grund: 'zu wenig Geld' };
   const c = kopie(z);
   c.geld -= p;
-  switch (was) {
-    case 'dock': c.docks.push({ f: besteFracht(c), p: (c.docks.length * 0.37) % 1 }); break;
-    case 'kran:tempo': c.kran.tempo++; break;
-    case 'kran:kap': c.kran.kap++; break;
-    case 'halle': c.halle++; break;
-    case 'schiff:groesse': c.schiff.groesse++; break;
-    case 'schiff:haeufig': c.schiff.haeufig++; break;
-    case 'lotse': c.lotse = 1; break;
-    case 'turm': {
-      const alt = besteFracht(c);
-      c.turm++;
-      const neu = besteFracht(c);
-      // Docks, die auf der bisher besten Fracht liefen, wechseln auf die neue beste
-      if (neu !== alt) for (const d of c.docks) if (d.f === alt) d.f = neu;
-      break;
-    }
-    default: break;
+  if (was === 'ebene') c.ebenen.push(neueEbene(c.ebenen.length));
+  else if (was === 'halle') c.halle++;
+  else if (was === 'turm') c.turm++;
+  else {
+    const m = SCHLUESSEL.exec(was);
+    const e = c.ebenen[Number(m[1])];
+    if (m[2] === 'lotse') e.lotse = 1; else e[m[2]]++;
   }
   return { ok: true, zustand: c, preis: p };
+}
+
+/** Wirkung eines Kaufs für die Anzeige: { text, plus } (plus = Einkommenszuwachs in Münzen/s) */
+export function effekt(z, was) {
+  const r = kaufe({ ...z, geld: MAX_GELD }, was);
+  if (!r.ok) return null;
+  const a = r.zustand;
+  const f1 = (x) => formatiere(x);
+  const s = stufeVon(z, was);
+  let text = '';
+  switch (s.art) {
+    case 'kran': text = `Kran ${f1(kranRate(z.ebenen[s.i]))} → ${f1(kranRate(a.ebenen[s.i]))}/s`; break;
+    case 'schiff': text = `Schiff ${f1(schiffGroesse(z, s.i))} → ${f1(schiffGroesse(a, s.i))}`; break;
+    case 'lager': text = `Platz ${f1(ebenenKap(z.ebenen[s.i]))} → ${f1(ebenenKap(a.ebenen[s.i]))}`; break;
+    case 'lotse': text = `Anlegen ${f1(anlegenZeit(z, s.i))} → ${f1(anlegenZeit(a, s.i))} s`; break;
+    case 'halle': text = `Verkauf ${f1(verkaufsRate(z))} → ${f1(verkaufsRate(a))}/s`; break;
+    case 'turm': text = `Reichweite ${z.turm} → ${a.turm}`; break;
+    case 'ebene': text = `Neu: ${EBENEN[z.ebenen.length].name}`; break;
+    default: break;
+  }
+  return { text, plus: einkommen(a) - einkommen(z) };
 }
 
 /** Günstigstes Upgrade, das das Einkommen wirklich steigert, samt Wartezeit; null wenn alles ausgebaut */
 export function naechstesZiel(z) {
   const e0 = einkommen(z);
   let best = null;
-  for (const was of ALLE_KAEUFE) {
+  for (const was of alleKaeufe(z)) {
     const p = preis(z, was);
     if (p === null) continue;
     if (best && p >= best.preis) continue;
     const r = kaufe({ ...z, geld: p }, was);
     if (!r.ok) continue;
-    // Turm schaltet Fracht frei (steigert das Einkommen auch über Größe/Häufigkeit), daher einfach vergleichen
     if (einkommen(r.zustand) <= e0 * 1.0001) continue;
     best = { was, preis: p };
   }
@@ -307,39 +367,19 @@ export function naechstesZiel(z) {
 }
 
 // ---------- Aktionen ohne Kosten ----------
-/** Fracht eines Docks setzen (nur freigeschaltete Fracht) */
-export function weise(z, dock, fracht) {
-  if (!GANZ(dock, 0, z.docks.length - 1) || !GANZ(fracht, 0, FRACHT.length - 1) || !frachtFrei(z, fracht)) {
-    return { ok: false, grund: 'nicht möglich' };
-  }
-  const c = kopie(z);
-  c.docks[dock].f = fracht;
-  return { ok: true, zustand: c };
-}
-
-/** Nächste freigeschaltete Fracht des Docks (Rundlauf) */
-export function naechsteFracht(z, dock) {
-  const d = z.docks[dock];
-  for (let i = 1; i <= FRACHT.length; i++) {
-    const f = (d.f + i) % FRACHT.length;
-    if (frachtFrei(z, f)) return f;
-  }
-  return d.f;
-}
-
 /** Schiff antippen: leichter Schub beim Entladen (Pause zwischen zwei Schüben) */
-export function anschub(z, dock) {
-  if (!GANZ(dock, 0, z.docks.length - 1)) return { ok: false, grund: 'kein Dock' };
+export function anschub(z, ebene) {
+  if (!GANZ(ebene, 0, z.ebenen.length - 1)) return { ok: false, grund: 'keine Ebene' };
   if (z.sperre > 0) return { ok: false, grund: 'zu früh' };
   const c = kopie(z);
-  const d = c.docks[dock];
-  const S = schiffGroesse(c, d.f);
-  const frei = Math.max(0, lagerKap(c) - lagerSumme(c));
+  const e = c.ebenen[ebene];
+  const S = schiffGroesse(c, ebene);
+  const frei = Math.max(0, ebenenKap(e) - e.puffer);
   const dp = Math.min(ANSCHUB_ANTEIL, frei / S);
   if (dp <= 0) return { ok: false, grund: 'Lager voll' };
-  c.lager[d.f] += dp * S;
-  d.p += dp;
-  d.p -= Math.floor(d.p);
+  e.puffer += dp * S;
+  e.p += dp;
+  e.p -= Math.floor(e.p);
   c.sperre = ANSCHUB_PAUSE_S;
   return { ok: true, zustand: c };
 }
@@ -352,7 +392,7 @@ const EINHEITEN = [
 /** Kompakte Zahl, deutsch: 12,5 · 1.234 · 1,2 Mio. · 3,4 Mrd. · 2 Bio. */
 export function formatiere(x) {
   if (!ZAHL(x) || x <= 0) return '0';
-  if (x < 1000) return rund(x, x < 10 ? 1 : x < 100 ? 1 : 0);
+  if (x < 1000) return rund(x, x < 100 ? 1 : 0);
   if (x < 1e6) return Math.floor(x).toLocaleString('de-DE');
   for (const [grenze, name] of EINHEITEN) {
     if (x >= grenze) return `${rund(Math.floor((x / grenze) * 10) / 10, 1)} ${name}`;
@@ -361,7 +401,6 @@ export function formatiere(x) {
 }
 
 function rund(x, stellen) {
-  // abrunden, damit „999,99“ nicht zu „1.000“ aufgerundet wird
   const f = 10 ** stellen;
   const w = Math.floor(x * f + 1e-9) / f;
   return w.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: stellen });

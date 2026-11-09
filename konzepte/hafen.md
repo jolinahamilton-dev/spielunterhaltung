@@ -1,46 +1,34 @@
-# Konzept: Hafen (`spiele/hafen/`)
+# Konzept: Hafen (`spiele/hafen/`) – Version 2 mit Ebenen
 
-Eigenes Idle-Management-Spiel („Hafen-Manager“). ID `hafen` · Name „Hafen“ · CSS-Präfix `ha-` · Währung „Münzen“.
-Beschreibung: „Schiffe laufen ein, Kräne laden aus, das Lager verkauft – baue deinen kleinen Hafen in Ruhe aus.“
+Eigenes Idle-Management-Spiel. ID `hafen` · Name „Hafen“ · CSS-Präfix `ha-` · Währung „Münzen“ · `standVersion` 2 (Stände der ersten Fassung werden verworfen → neuer Hafen).
+Ausnahme zum Briefing: Echtzeit-Fortschritt (nur Wartezeit, kein Zeitdruck, kein Verlieren, keine Töne). Nur Variante `standard`, kein Rückgängig.
 
-## Ausnahme zum Briefing
-Echtzeit-Fortschritt ist gewollt (kein Zeitdruck, nur Wartezeit). Kein Verlieren, keine Sammelzwänge, keine Töne, kein Timer-Druck.
-Varianten: nur `standard`. Rückgängig gibt es nicht.
+## Recherche (Prinzip, keine Übernahme)
+Bekannte Idle-Tycoon-Spiele bauen auf Stationen/Ebenen mit eigener Ressource, einer Kette Erzeugung → Puffer/Lager → Transport → Verkauf, Upgrades direkt an der Station und dem Grundsatz, dass die Stufen der Kette zueinander passen müssen (sonst staut es sich). Daraus: Ebenen mit eigener Ware, sichtbare Puffer an jeder Station, Engpässe zeigen (roter Balken), Upgrades in der Karte der Station.
 
 ## Prinzip
-Seitenansicht: Leuchtturm links, Meer, darunter bis zu 6 **Docks**. Jedes Dock hat ein Schiff mit einer **Frachtart** (Holz, Fisch, Erz).
-Schiffe kommen von selbst, legen an, werden von den Kränen entladen, die Ware geht ins **Lager**, die Lagerhalle verkauft sie gegen Münzen (wertvollste Fracht zuerst).
-Antippen eines Schiffs beschleunigt das Entladen leicht (Schub von 2 % einer Fahrt, höchstens alle 1,5 s).
+Jede **Ebene** hat eine eigene Ressource (Holz, Fisch, Erz, Kohle, Stoffe, Gewürze, Porzellan, Perlen; Wert ×3 je Ebene), ein eigenes Dock mit Schiff, Kran, Dock-Lager und Lader. Eine neue Ressource gibt es nur durch **Kauf der nächsten Ebene** (Preis 60 · 4^(n−2)).
+Kette je Ebene: Schiff (Ladung) → Kran (nur im Entladefenster, stoßweise) → **Dock-Lager** → Lader → **Hauptlager** → Verkauf (wertvollste Ware zuerst) → Münzen.
+Antippen eines Schiffs: kleiner Schub (+2 % einer Fahrt in das Dock-Lager, Pause 1,5 s).
 
-## Upgrades (alle als Buttons mit Preis)
-- **Neues Dock** (bis 6; Preis ×3,2 je Dock)
-- **Kräne: Tempo / Kapazität** (je bis Stufe 40)
-- **Lagerhalle** (Lagerplatz + Verkaufstempo)
-- **Schiffe: Größe / Häufigkeit**
-- **Leuchtturm** (Reichweite: mehr und größere Schiffe, kürzere Wartezeit; schaltet Fisch ab Stufe 4 und Erz ab Stufe 8 frei)
-- **Lotsenboot** (einmalig: Anlegen geht automatisch und ist dreimal so schnell)
-Kosten = Basis · Wachstum^(Stufe−1), Wachstum 1,15–1,3, Wirkung linear sanft. **Frachtzuteilung** je Dock per Knopf; beim Freischalten einer neuen Fracht wechseln Docks, die auf der bisher besten Fracht liefen, automatisch (von Hand änderbar).
+## Upgrades (direkt in der Ebenen-Karte, mit Effekt-Vorschau „a → b“, Stufe, Preis)
+- Kran (Tempo) · Schiffe (Größe, seltener Wartezeit) · Dock-Lager (Platz + Lader-Tempo) · Lotsenboot (einmalig, Anlegen schneller)
+- Karte „Hafenanlagen“: Leuchtturm (alle Ebenen: größere Schiffe, kürzere Wartezeit/Anlegen), Verkaufshalle (Hauptlager-Platz + Verkaufstempo)
+Kosten = Basis · Wachstum^(Stufe−1) (1,18–1,28), Ebenen-Upgrades zusätzlich ×5 je Ebene. Ein Upgrade ohne Wirkung auf das Einkommen wird nicht als „Nächstes Ziel“ empfohlen.
 
-## Simulation (`logik.js`, ohne DOM, ohne Zufall)
-Fließmodell. Je Dock i: Zykluszeit `T = Anlegen + Schiffsgröße/Krantempo + Wartezeit auf das nächste Schiff`; der Fortschritt `p ∈ [0,1)` im Zustand ist die Schiffsphase (ankommen → entladen → ablegen) und treibt die Anzeige.
-Je Schritt: `dp = h/T`, Ware `dp·S` ins Lager, begrenzt durch freien Lagerplatz (+ Verkaufsrate im Schritt; dann warten die Kräne). Danach verkauft das Lager `min(Bestand, Rate·h)`, teuerste Fracht zuerst.
-`fortschritt(z, dt)` teilt dt in n = min(600, max(1, ⌈dt/0,5⌉)) gleiche Schritte, liefert einen neuen Zustand (Eingabe bleibt unverändert).
-`kaufe(z, was)` → `{ ok, zustand, preis, grund }`, `preis`, `naechstesZiel` (günstigstes Upgrade, das das Einkommen wirklich steigert, samt Wartezeit), `einkommen` (Gleichgewicht, Münzen/s), `formatiere` (de-DE, „1,2 Mio.“).
+## Simulation (`logik.js`, ohne DOM, Zufall und Uhr)
+`fortschritt(z, dt)` rein und deterministisch, n = min(600, max(1, ⌈dt/0,5⌉)) Schritte; je Schritt: Schiffsphase rückt vor, Ware im Entladefenster ins Dock-Lager (begrenzt durch freien Platz, Kran wartet bei vollem Lager), Lader → Hauptlager (begrenzt durch Platz), Verkauf. `kaufe`, `preis`, `effekt`, `naechstesZiel`, `einkommenDetail`, `anschub`, `formatiere` (de-DE), `formatiereDauer`.
 
 ## Offline
-`luecke(dt)`: Abwesenheit bis 60 s voll, darüber nur die Hälfte (Faktor ≤ 1), Deckel 8 h. Spielstand hat Zeitstempel `t` (ms): Uhr zurück oder absurde Werte (Zukunft) zählen 0; ein Stand mit `t` mehr als 1 Tag in der Zukunft ist ungültig. Beim Öffnen ab 60 s Abwesenheit: „Während du weg warst: +X Münzen“. Verstecker Tab: Takt stoppt, beim Zurückkehren wird nachgerechnet (gleiche `luecke`).
-UI-Tick 200 ms. Speichern alle 10 s und bei jedem Kauf.
+Abwesenheit bis 60 s voll, darüber Faktor 0,5, Deckel 8 h (`luecke`). Uhr zurück/absurd → 0; Zeitstempel > 1 Tag in der Zukunft → Stand verworfen. „Während du weg warst (…): +X Münzen“. Verstecker Tab: Takt stoppt, bei Rückkehr wird nachgerechnet.
 
-## Optik
-Seitenansicht Hafen/Meer, ruhige Dauerbewegung (Wellen, Schiffe gleiten, Leuchtfeuer pulsiert, CSS). Bei `bewegungReduziert()`: Klasse `ha-still`, keine Animation, nur Zahlen/Balken. Farben nur über CSS-Variablen; Symbole (`ctx.farben`) bei Muster-Modus an den Fracht-Chips.
-Layout: eine Spalte ab 360 px, Seite scrollt senkrecht.
+## Oberfläche
+Feste Leiste (`position: sticky` unter der Kopfleiste): Münzen, Einkommen/s, „Ziel“ knapp mit Kaufen-Knopf. Karte Hafenanlagen mit Leuchtturm-Szene, Hauptlager-Balken. Je Ebene eine Karte: Symbol, Wert, Ertrag/s, Schiff am Kai, drei Mengenzeilen (Schiff, Dock-Lager, Im Verkauf: Balken + „Menge / Kapazität“, feste Breiten, tabular-nums) und vier Upgrade-Knöpfe. Ruhige Dauerbewegung (Wellen, Leuchtfeuer, Schiffe), aus bei `bewegungReduziert()` (Klasse `ha-still`). Layout ab 360 px.
+**Keine Neuaufbauten pro Tick:** Knöpfe/Balken werden einmal gebaut, danach nur Text/Breite bei Änderung (Test prüft Knotenidentität).
+Bedienung: Buttons mit `aria-label` (inkl. Effekt und Einkommenszuwachs), Taste K kauft das Ziel, „Neuer Hafen“ mit Bestätigung.
 
-## Bedienung
-Alles Buttons (Tab/Enter), Preis im Knopf, bei zu wenig Geld `aria-disabled="true"` (Klick meldet „Noch zu wenig Münzen“). Taste K kauft das Nächste Ziel. „Neuer Hafen“ über Knopf und Shell-Taste N mit Bestätigung.
-
-## Datenmodell (standVersion 1)
-`{ v:1, t, uhr, sperre, geld, gesamt, docks:[{f,p}], kran:{tempo,kap}, halle, schiff:{groesse,haeufig}, turm, lotse, lager:[holz,fisch,erz] }`
-Streng validiert (`ausSpeicher`): endliche Zahlen in Grenzen, ganze Stufen ≤ Maximum, 1–6 Docks, Fracht nur wenn vom Leuchtturm freigeschaltet, Lagerbestand ≤ Lagerplatz; Zusatzfelder werden verworfen. Ungültig → neuer Hafen.
+## Datenmodell (standVersion 2)
+`{ v:2, t, uhr, sperre, geld, gesamt, halle, turm, ebenen:[{kran,schiff,lager,lotse,p,puffer}], haupt:[8 Zahlen] }`, streng validiert (`ausSpeicher`), Zusatzfelder verworfen.
 
 ## Tests
-Wachstumskurve (Günstigstes-zuerst: erste 30 Käufe in den Zielgrenzen), Offline-Deckel und Zeitplausibilität, Determinismus, Validierung/Fuzz, Kaufregeln, Formatierung, Oberfläche (Smoketest, K-Taste, Abwesenheit, Neu, ruhig), kaputte Stände, Stil (kein vibrate/Audio/eval/innerHTML/Math.random).
+Format, Puffer-Fluss und Kapazitäten, Verkauf teuerste zuerst, Determinismus, Schrittweiten-Konsistenz, Käufe/Maxima, Ebenen-Regeln, Effekt-Vorschau, Preiswachstum ≤ ×1,3, Wachstumskurve (erste 30 Käufe 3–180 s; zweite Ebene in 3–15 min; Ebenen mit Vorrang alle 1,5–20 min mit steigenden Preisen), Offline-Deckel/Konsistenz, Validierung/Fuzz/alte Stände, Oberfläche (keine Neuaufbauten, Käufe, K-Taste, neue Ebene, Abwesenheit, ruhig, Pause), kaputte Stände, Stil.

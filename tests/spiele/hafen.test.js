@@ -8,26 +8,44 @@ import { erstelleFarben } from '../../kern/farben.js';
 import * as eingabe from '../../kern/eingabe.js';
 import { falscherSpeicher } from '../kern/hilfen.js';
 
-/** Stets das Günstigste kaufen (das Einkommen steigert); liefert die Wartezeiten (s) je Kauf */
-function greedy(anzahl, z = L.neuerHafen(0)) {
+/**
+ * Kauf-Strategie für die Kurventests. `ebenenVorrang`: die nächste Ebene wird angespart,
+ * sobald sie höchstens 400 s Einkommen kostet; sonst stets das günstigste lohnende Upgrade.
+ * Liefert Wartezeiten (s) je Kauf und die Zeitpunkte der Ebenen-Freischaltungen.
+ */
+function spiele(anzahl, { ebenenVorrang = false, maxZeit = 6 * 3600, z = L.neuerHafen(0) } = {}) {
   const waits = [];
+  const ohneEbene = [];
+  const ebenen = [];
   let gesamt = 0;
-  for (let i = 0; i < anzahl; i++) {
-    const g = L.naechstesZiel(z);
+  for (let i = 0; i < anzahl && gesamt < maxZeit; i++) {
+    let g = L.naechstesZiel(z);
+    const pe = L.preis(z, 'ebene');
+    if (ebenenVorrang && pe !== null && pe <= 400 * L.einkommen(z)) g = { was: 'ebene', preis: pe };
     if (!g) break;
     let w = 0;
     while (z.geld < g.preis && w < 100000) { z = L.fortschritt(z, 1); w++; }
     z = L.kaufe(z, g.was).zustand;
     waits.push(w);
+    if (g.was !== 'ebene') ohneEbene.push(w);
     gesamt += w;
+    if (g.was === 'ebene') ebenen.push({ zeit: gesamt, preis: g.preis, kauf: i + 1 });
   }
-  return { waits, gesamt, z };
+  return { waits, ohneEbene, gesamt, z, ebenen };
 }
+const greedy = (n, opt) => spiele(n, opt);
 
 function reich(extra = {}) {
   const z = L.neuerHafen(0);
-  z.geld = 1e9;
+  z.geld = 1e12;
   return Object.assign(z, extra);
+}
+
+/** Zustand mit allen Ebenen */
+function vollerHafen() {
+  let z = reich();
+  while (z.ebenen.length < L.MAX_EBENEN) z = L.kaufe(z, 'ebene').zustand;
+  return z;
 }
 
 test('Zahlen: kompakt im deutschen Format', () => {
@@ -51,15 +69,18 @@ test('Zahlen: kompakt im deutschen Format', () => {
   gleich(L.formatiereDauer(Infinity), 'unbekannt');
 });
 
-test('Start: ein Dock mit Holz, Stufe 1, kein Geld', () => {
+test('Start: eine Ebene (Holz), Stufe 1, kein Geld, leere Lager', () => {
   const z = L.neuerHafen(1000);
-  gleich(z.docks.length, 1);
-  gleich(z.docks[0].f, 0);
+  gleich(z.ebenen.length, 1);
   gleich(z.geld, 0);
   gleich(z.t, 1000);
+  gleich(z.v, 2);
+  gleich(L.puffer(z) + L.hauptSumme(z), 0);
   wahr(L.istGueltig(z));
   wahr(L.einkommen(z) > 0.2 && L.einkommen(z) < 2);
   gleich(L.neuerHafen(NaN).t, 0);
+  gleich(L.EBENEN.length, L.MAX_EBENEN);
+  for (let i = 1; i < L.EBENEN.length; i++) wahr(L.EBENEN[i].wert > L.EBENEN[i - 1].wert, 'Wert steigt');
 });
 
 test('Fortschritt: Geld wächst, Original bleibt unverändert, deterministisch', () => {
@@ -70,10 +91,48 @@ test('Fortschritt: Geld wächst, Original bleibt unverändert, deterministisch',
   gleich(JSON.stringify(z), vorher);
   tief(a, b);
   wahr(a.geld > 0 && a.gesamt === a.geld);
-  wahr(a.uhr === 100);
-  // Gleichgewicht: grob so viel wie vorhergesagt (nach dem Anlaufen)
+  gleich(a.uhr, 100);
   const lang = L.fortschritt(z, 1000);
   wahr(Math.abs(lang.gesamt / 1000 - L.einkommen(z)) / L.einkommen(z) < 0.1, 'Einkommen ≈ Vorhersage');
+});
+
+test('Puffer: Ware wandert Schiff → Dock-Lager → Hauptlager → Verkauf, Mengen bleiben im Rahmen', () => {
+  let z = reich();
+  z = L.kaufe(L.kaufe(z, 'ebene').zustand, 'ebene').zustand;
+  z.geld = 0;
+  let sahLager = false;
+  let sahHaupt = false;
+  for (let i = 0; i < 120; i++) {
+    z = L.fortschritt(z, 1);
+    if (z.ebenen[0].puffer > 0.01) sahLager = true;
+    if (L.hauptSumme(z) > 0.01) sahHaupt = true;
+    wahr(z.ebenen[0].puffer <= L.ebenenKap(z.ebenen[0]) + 1e-9, 'Dock-Lager ≤ Kapazität');
+    wahr(L.hauptSumme(z) <= L.hallenKap(z) + 1e-9, 'Hauptlager ≤ Kapazität');
+  }
+  wahr(sahLager && sahHaupt && z.geld > 0, 'Ware kam an allen Stationen vorbei');
+  // Lader zu langsam: Dock-Lager füllt sich, der Kran wartet
+  const y = L.neuerHafen(0);
+  y.ebenen[0].kran = 40;
+  y.ebenen[0].schiff = 40;
+  const r = L.fortschritt(y, 300);
+  wahr(r.ebenen[0].puffer > L.ebenenKap(r.ebenen[0]) * 0.8, `Dock-Lager voll: ${r.ebenen[0].puffer}`);
+  // Hauptlager randvoll: Verkauf läuft weiter, Lager läuft nie über
+  const v = L.neuerHafen(0);
+  v.haupt[0] = L.hallenKap(v);
+  const s = L.fortschritt(v, 30);
+  wahr(L.hauptSumme(s) <= L.hallenKap(v) + 1e-9 && s.geld > 0);
+});
+
+test('Verkauf: wertvollste Ware zuerst', () => {
+  const z = vollerHafen();
+  z.geld = 0;
+  z.ebenen = z.ebenen.slice(0, 3);
+  for (const e of z.ebenen) e.puffer = 0;
+  z.haupt = [10, 10, 10, 0, 0, 0, 0, 0];
+  z.halle = 1;   // 3 Einheiten/s
+  const r = L.fortschritt(z, 2);
+  wahr(r.haupt[2] < 10, `Ebene 3 wird verkauft: ${r.haupt}`);
+  wahr(r.haupt[0] >= 9.9, 'Holz bleibt liegen');
 });
 
 test('Fortschritt: kleine und große Schritte liefern fast dasselbe', () => {
@@ -81,83 +140,96 @@ test('Fortschritt: kleine und große Schritte liefern fast dasselbe', () => {
   let klein = z;
   for (let i = 0; i < 60; i++) klein = L.fortschritt(klein, 1);
   const gross = L.fortschritt(z, 60);
-  wahr(Math.abs(klein.gesamt - gross.gesamt) <= Math.max(1, gross.gesamt) * 0.02, `${klein.gesamt} vs ${gross.gesamt}`);
+  wahr(Math.abs(klein.gesamt - gross.gesamt) <= Math.max(1, gross.gesamt) * 0.03, `${klein.gesamt} vs ${gross.gesamt}`);
 });
 
 test('Fortschritt: riesige dt und krumme Werte bleiben endlich und gültig', () => {
-  const z = greedy(20).z;
+  const z = greedy(20, { ebenenVorrang: true }).z;
   for (const dt of [0, -5, NaN, Infinity, -Infinity, 1e-9, 0.1, 1e6, 1e12]) {
     const r = L.fortschritt(z, dt);
     wahr(Number.isFinite(r.geld) && r.geld >= z.geld, `dt=${dt}`);
-    wahr(r.lager.every((x) => Number.isFinite(x) && x >= 0), `Lager dt=${dt}`);
-    wahr(r.docks.every((d) => d.p >= 0 && d.p < 1), `Phase dt=${dt}`);
+    wahr(r.ebenen.every((e) => e.puffer >= 0 && e.p >= 0 && e.p < 1), `Ebenen dt=${dt}`);
+    wahr(r.haupt.every((x) => Number.isFinite(x) && x >= 0), `Haupt dt=${dt}`);
     wahr(L.istGueltig(r), `gültig dt=${dt}`);
   }
   gleich(L.fortschritt(z, -3).geld, z.geld);
 });
 
-test('Lager: voll → Kräne warten, Verkauf wertvollste Fracht zuerst', () => {
-  // Lager randvoll mit Holz, Verkauf läuft, Geld steigt, Lager übersteigt die Kapazität nie
-  const z = L.neuerHafen(0);
-  z.lager = [L.lagerKap(z), 0, 0];
-  const r = L.fortschritt(z, 30);
-  wahr(L.lagerSumme(r) <= L.lagerKap(z) + 1e-9);
-  wahr(r.geld > 0);
-  // Erz wird vor Holz verkauft
-  const y = reich({ turm: 8 });
-  y.geld = 0;
-  y.lager = [10, 0, 10];
-  y.docks = [];
-  y.docks.push({ f: 0, p: 0 });
-  const s = L.fortschritt(y, 2);
-  wahr(s.lager[2] < 10 && s.lager[0] >= 9.9, `Erz zuerst: ${s.lager}`);
-});
-
 test('Käufe: Preis, Abbuchung, Maximum, ungültige Namen', () => {
   const z = L.neuerHafen(0);
-  gleich(L.kaufe(z, 'kran:tempo').grund, 'zu wenig Geld');
-  gleich(L.kaufe(z, 'gibtsnicht').grund, 'nicht verfügbar');
-  gleich(L.kaufe(z, '__proto__').ok, false);
-  gleich(L.preis(z, 'nix'), null);
+  gleich(L.kaufe(z, 'e0:kran').grund, 'zu wenig Geld');
+  for (const x of ['gibtsnicht', '__proto__', 'e9:kran', 'e1:kran', 'e0:foo', '', null, 5]) {
+    gleich(L.kaufe(z, x).ok, false, String(x));
+    gleich(L.preis(z, x), null, String(x));
+  }
   z.geld = 1e9;
-  const r = L.kaufe(z, 'kran:tempo');
+  const r = L.kaufe(z, 'e0:kran');
   wahr(r.ok);
-  gleich(r.zustand.kran.tempo, 2);
+  gleich(r.zustand.ebenen[0].kran, 2);
   gleich(r.zustand.geld, 1e9 - r.preis);
-  gleich(z.kran.tempo, 1, 'Original unverändert');
-  // Maximum
-  let m = reich();
-  for (const was of ['kran:tempo', 'kran:kap', 'halle', 'schiff:groesse', 'schiff:haeufig', 'turm']) {
+  gleich(z.ebenen[0].kran, 1, 'Original unverändert');
+  let m = vollerHafen();
+  gleich(L.preis(m, 'ebene'), null);
+  for (const was of L.alleKaeufe(m)) {
     for (let i = 0; i < L.MAX_STUFE + 3; i++) { const k = L.kaufe(m, was); if (k.ok) m = k.zustand; }
     gleich(L.preis(m, was), null, was);
   }
-  gleich(m.turm, L.MAX_STUFE);
   wahr(L.istGueltig(m));
-  // Docks bis zum Maximum
-  for (let i = 0; i < 10; i++) { const k = L.kaufe(m, 'dock'); if (k.ok) m = k.zustand; }
-  gleich(m.docks.length, L.MAX_DOCKS);
-  gleich(L.preis(m, 'dock'), null);
-  // Lotse nur einmal
-  const l = L.kaufe(reich(), 'lotse');
-  wahr(l.ok);
-  gleich(l.zustand.lotse, 1);
-  gleich(L.preis(l.zustand, 'lotse'), null);
-  gleich(L.kaufe(l.zustand, 'lotse').ok, false);
+  gleich(m.turm, L.MAX_STUFE);
+  gleich(m.ebenen.length, L.MAX_EBENEN);
+  gleich(m.ebenen[0].lotse, 1);
 });
 
-test('Lotsenboot und Leuchtturm: Anlegen geht schneller, Wartezeit sinkt', () => {
-  const z = L.neuerHafen(0);
-  const a = L.anlegenZeit(z);
-  const l = L.kaufe(reich(), 'lotse').zustand;
-  wahr(L.anlegenZeit(l) < a / 2);
-  const t2 = L.kaufe(reich(), 'turm').zustand;
-  wahr(L.wartezeit(t2) < L.wartezeit(z));
-  wahr(L.schiffGroesse(t2, 0) > L.schiffGroesse(z, 0));
-  wahr(L.einkommen(l) > L.einkommen(z));
+test('Ebenen: neue Ressource nur durch Kauf der nächsten Ebene, jede Ebene hat eigene Upgrades', () => {
+  let z = reich();
+  const p2 = L.preis(z, 'ebene');
+  z = L.kaufe(z, 'ebene').zustand;
+  gleich(z.ebenen.length, 2);
+  const t = L.kaufe(z, 'turm').zustand;
+  gleich(t.ebenen.length, 2, 'Leuchtturm schaltet keine Ressource frei');
+  tief({ ...z.ebenen[1], p: 0 }, { kran: 1, schiff: 1, lager: 1, lotse: 0, p: 0, puffer: 0 });
+  wahr(z.ebenen[1].p !== z.ebenen[0].p, 'Schiffsphase versetzt');
+  const k = L.kaufe(z, 'e1:kran').zustand;
+  gleich(k.ebenen[1].kran, 2);
+  gleich(k.ebenen[0].kran, 1);
+  wahr(L.preis(z, 'e1:kran') > L.preis(z, 'e0:kran'), 'höhere Ebene teurer');
+  let q = reich();
+  let letzt = p2;
+  for (let i = 2; i < L.MAX_EBENEN; i++) {
+    q = L.kaufe(q, 'ebene').zustand;
+    const p = L.preis(q, 'ebene');
+    if (p !== null) { wahr(p > letzt, `Ebene ${i + 1} teurer`); letzt = p; }
+  }
+  const e = L.einkommenDetail(vollerHafen());
+  wahr(e.je.length === L.MAX_EBENEN && e.gesamt > 0);
+});
+
+test('Lotsenboot und Leuchtturm wirken auf Anlegen und Wartezeit', () => {
+  const z = reich();
+  const l = L.kaufe(z, 'e0:lotse').zustand;
+  wahr(L.anlegenZeit(l, 0) < L.anlegenZeit(z, 0) / 2);
+  const t = L.kaufe(z, 'turm').zustand;
+  wahr(L.wartezeit(t, 0) < L.wartezeit(z, 0));
+  wahr(L.schiffGroesse(t, 0) > L.schiffGroesse(z, 0));
+  wahr(L.einkommen(l) > L.einkommen(z) && L.einkommen(t) > L.einkommen(z));
+  gleich(L.kaufe(l, 'e0:lotse').ok, false, 'Lotse nur einmal');
+});
+
+test('Effekt-Vorschau: Text und Zuwachs für jeden möglichen Kauf', () => {
+  const z = vollerHafen();
+  z.geld = 0;
+  for (const was of L.alleKaeufe(z)) {
+    const ef = L.effekt(z, was);
+    if (L.preis(z, was) === null) { gleich(ef, null); continue; }
+    wahr(ef && typeof ef.text === 'string' && ef.text.length > 3 && Number.isFinite(ef.plus), was);
+  }
+  const k = L.effekt(L.neuerHafen(0), 'e0:kran');
+  wahr(k.text.includes('→') && k.plus > 0);
+  gleich(L.effekt(L.neuerHafen(0), 'nix'), null);
 });
 
 test('Preise: wachsen mit der Stufe, nie explodierend (≤ ×1,3 je Stufe)', () => {
-  for (const was of ['kran:tempo', 'kran:kap', 'halle', 'schiff:groesse', 'schiff:haeufig', 'turm']) {
+  for (const was of ['e0:kran', 'e0:schiff', 'e0:lager', 'halle', 'turm']) {
     let z = reich();
     let letzt = L.preis(z, was);
     for (let i = 1; i < L.MAX_STUFE - 1; i++) {
@@ -170,72 +242,59 @@ test('Preise: wachsen mit der Stufe, nie explodierend (≤ ×1,3 je Stufe)', () 
   }
 });
 
-test('Frachtarten: Freischaltung durch den Leuchtturm, Zuteilung, Wechsel beim Freischalten', () => {
-  let z = reich();
-  gleich(L.frachtFrei(z, 0), true);
-  gleich(L.frachtFrei(z, 1), false);
-  gleich(L.weise(z, 0, 1).ok, false, 'Fisch noch gesperrt');
-  gleich(L.weise(z, 5, 0).ok, false, 'Dock gibt es nicht');
-  gleich(L.weise(z, 0, 7).ok, false);
-  gleich(L.naechsteFracht(z, 0), 0);
-  while (z.turm < L.FRACHT[1].turm) z = L.kaufe(z, 'turm').zustand;
-  gleich(z.docks[0].f, 1, 'Dock wechselt automatisch auf Fisch');
-  gleich(L.naechsteFracht(z, 0), 0);
-  const r = L.weise(z, 0, 0);
-  wahr(r.ok);
-  gleich(r.zustand.docks[0].f, 0);
-  // neues Dock bekommt die beste Fracht
-  z = L.kaufe(z, 'dock').zustand;
-  gleich(z.docks[1].f, 1);
-  while (z.turm < L.FRACHT[2].turm) z = L.kaufe(z, 'turm').zustand;
-  gleich(z.docks[1].f, 2);
-  wahr(L.istGueltig(z));
-  // wertvollere Fracht bringt mehr
-  const a = L.einkommen({ ...z, docks: [{ f: 0, p: 0 }] });
-  const b = L.einkommen({ ...z, docks: [{ f: 2, p: 0 }] });
-  wahr(b > a);
-});
-
 test('Wachstumskurve: die ersten 30 Käufe (stets das Günstigste) liegen in den Zielgrenzen', () => {
   const { waits, gesamt } = greedy(30);
   gleich(waits.length, 30);
   wahr(Math.max(...waits) <= 180, `längste Wartezeit ${Math.max(...waits)} s`);
-  wahr(Math.min(...waits) >= 10, `kürzeste Wartezeit ${Math.min(...waits)} s`);
-  wahr(gesamt <= 30 * 60, `Gesamtzeit ${gesamt} s`);
-  wahr(gesamt >= 5 * 60, 'nicht zu schnell');
+  wahr(Math.min(...waits) >= 3, `kürzeste Wartezeit ${Math.min(...waits)} s`);
+  wahr(waits.filter((w) => w >= 15).length >= 20, 'meist 15 s oder mehr');
+  wahr(gesamt <= 30 * 60 && gesamt >= 5 * 60, `Gesamtzeit ${gesamt} s`);
 });
 
-test('Wachstumskurve: auch später bleiben die Wartezeiten sanft (kein Sprung über 15 min bis Kauf 90)', () => {
-  const { waits } = greedy(90);
-  wahr(waits.length >= 60);
-  wahr(Math.max(...waits) <= 15 * 60, `längste Wartezeit ${Math.max(...waits)} s`);
+test('Wachstumskurve: Ebenen werden mit Vorrang nach etwa 1,5 bis 20 Minuten freigeschaltet, Preise steigen', () => {
+  const { ebenen, ohneEbene: waits } = spiele(600, { ebenenVorrang: true, maxZeit: 60 * 60 });
+  wahr(ebenen.length >= 6, `Ebenen: ${ebenen.length}`);
+  let letztZeit = 0;
+  let letztPreis = 0;
+  for (const e of ebenen) {
+    const abstand = e.zeit - letztZeit;
+    wahr(abstand >= 90 && abstand <= 20 * 60, `Abstand ${Math.round(abstand)} s bei Preis ${e.preis}`);
+    wahr(e.preis > letztPreis, 'Preise steigen');
+    letztZeit = e.zeit;
+    letztPreis = e.preis;
+  }
+  wahr(Math.max(...waits) <= 180, `längste Upgrade-Wartezeit ${Math.max(...waits)} s`);
+});
+
+test('Wachstumskurve: auch Günstigstes-zuerst schaltet die 2. Ebene in 3–15 Minuten frei', () => {
+  const { ebenen, waits } = greedy(120);
+  wahr(ebenen.length >= 1);
+  wahr(ebenen[0].zeit >= 180 && ebenen[0].zeit <= 15 * 60, `2. Ebene nach ${ebenen[0].zeit} s`);
+  wahr(Math.max(...waits) <= 180, `längste Wartezeit ${Math.max(...waits)} s`);
 });
 
 test('Nächstes Ziel: günstigstes lohnendes Upgrade samt Wartezeit', () => {
   const z = L.neuerHafen(0);
   const g = L.naechstesZiel(z);
   wahr(g && g.preis > 0 && g.wartezeit > 0 && Number.isFinite(g.wartezeit));
-  const reicher = { ...z, geld: g.preis };
-  gleich(L.naechstesZiel(reicher).wartezeit, 0);
-  const ende = reich();
-  for (const was of L.ALLE_KAEUFE) while (L.preis(ende, was) !== null) Object.assign(ende, L.kaufe(ende, was).zustand);
+  gleich(L.naechstesZiel({ ...z, geld: g.preis }).wartezeit, 0);
+  let ende = vollerHafen();
+  for (const was of L.alleKaeufe(ende)) while (L.preis(ende, was) !== null) ende = L.kaufe(ende, was).zustand;
   gleich(L.naechstesZiel(ende), null);
 });
 
-test('Anschub: kleiner Schub, Sperre verhindert Dauerklicken', () => {
+test('Anschub: kleiner Schub in das Dock-Lager, Sperre verhindert Dauerklicken', () => {
   let z = L.neuerHafen(0);
   const r = L.anschub(z, 0);
   wahr(r.ok);
-  wahr(r.zustand.docks[0].p > z.docks[0].p || r.zustand.docks[0].p < 0.05);
   gleich(r.zustand.sperre, L.ANSCHUB_PAUSE_S);
+  wahr(r.zustand.ebenen[0].puffer <= L.schiffGroesse(z, 0) * 0.021 + 1e-9 && r.zustand.ebenen[0].puffer > 0);
   gleich(L.anschub(r.zustand, 0).ok, false);
-  gleich(L.anschub(z, 3).ok, false, 'Dock gibt es nicht');
+  gleich(L.anschub(z, 3).ok, false, 'Ebene gibt es nicht');
+  gleich(L.anschub(z, -1).ok, false);
   z = L.fortschritt(r.zustand, 2);
   gleich(z.sperre, 0);
   wahr(L.anschub(z, 0).ok);
-  // Schub ist klein (höchstens ein paar Prozent einer Fahrt)
-  wahr(r.zustand.lager[0] - z.lager[0] <= L.schiffGroesse(z, 0) * 0.03 + 1e-9 || true);
-  wahr(r.zustand.lager[0] <= L.schiffGroesse(z, 0) * 0.021 + 1e-9);
 });
 
 test('Offline: Lücke gedeckelt (8 h) und Faktor ≤ 1', () => {
@@ -253,26 +312,25 @@ test('Offline: Lücke gedeckelt (8 h) und Faktor ≤ 1', () => {
   for (const s of [10, 100, 1000, 10000, 30000, 90000]) { const w = L.luecke(s); wahr(w >= letzt && w <= s); letzt = w; }
 });
 
-test('Offline: Verrechnung beim Öffnen, Deckel, kein Fortschritt bei Uhr-Unsinn', () => {
-  const z = greedy(10).z;
+test('Offline: Verrechnung beim Öffnen, Deckel, konsistent mit Online, kein Fortschritt bei Uhr-Unsinn', () => {
+  const z = greedy(25, { ebenenVorrang: true }).z;
   z.t = 1_000_000;
   const o1 = L.offline(z, 1_000_000 + 3600_000);
   wahr(o1.gewinn > 0 && o1.dt === 3600);
   gleich(o1.zustand.t, 1_000_000 + 3600_000);
-  // 8 h und 100 h → gleich viel (Deckel)
+  wahr(L.istGueltig(o1.zustand), 'Stand nach Offline gültig');
   const a = L.offline(z, 1_000_000 + 8 * 3600_000);
   const b = L.offline(z, 1_000_000 + 100 * 3600_000);
   gleich(a.zustand.geld, b.zustand.geld);
   wahr(b.dt <= L.OFFLINE_MAX_S);
-  // Uhr zurück / gleiche Zeit → nichts
   gleich(L.offline(z, 500_000).gewinn, 0);
   gleich(L.offline(z, 1_000_000).gewinn, 0);
   gleich(L.offline(z, NaN).gewinn, 0);
   gleich(L.offline(z, -1).gewinn, 0);
-  // Offline bringt höchstens so viel wie dieselbe Zeit online (Faktor ≤ 1)
   const online = L.fortschritt(z, 3600);
   wahr(o1.zustand.geld <= online.geld + 1e-6, 'Offline ≤ online');
-  // Plausibilität des Zeitstempels
+  const stueckweise = (() => { let q = z; for (let i = 0; i < 36; i++) q = L.fortschritt(q, 100); return q; })();
+  wahr(Math.abs(stueckweise.geld - online.geld) <= online.geld * 0.15 + 1, `${stueckweise.geld} vs ${online.geld}`);
   wahr(L.zeitPlausibel({ t: 1000 }, 2000));
   wahr(L.zeitPlausibel({ t: 2000 + 3600_000 }, 2000));
   wahr(!L.zeitPlausibel({ t: 2000 + 3 * 24 * 3600_000 }, 2000));
@@ -280,17 +338,14 @@ test('Offline: Verrechnung beim Öffnen, Deckel, kein Fortschritt bei Uhr-Unsinn
 
 test('Zeit rückwärts: negative dt wirkt nie', () => {
   const z = greedy(8).z;
-  for (const dt of [-1, -1e9, -0.0001]) {
-    const r = L.fortschritt(z, dt);
-    tief(r, z);
-  }
+  for (const dt of [-1, -1e9, -0.0001]) tief(L.fortschritt(z, dt), z);
 });
 
-test('Spielstand: JSON-tauglich, streng validiert', () => {
-  const z = greedy(25).z;
+test('Spielstand: JSON-tauglich, streng validiert, alte Stände (Version 1) werden verworfen', () => {
+  const z = greedy(25, { ebenenVorrang: true }).z;
   const s = JSON.parse(JSON.stringify(L.zumSpeichern(z, 5000)));
   tief(L.ausSpeicher(s), s);
-  gleich(s.v, 1);
+  gleich(s.v, 2);
   const kopie = () => JSON.parse(JSON.stringify(s));
   const falsch = [];
   const setze = (fn) => { const k = kopie(); fn(k); falsch.push(k); };
@@ -300,45 +355,44 @@ test('Spielstand: JSON-tauglich, streng validiert', () => {
   setze((k) => { k.t = 5e12; });
   setze((k) => { k.uhr = -3; });
   setze((k) => { k.sperre = 99; });
-  setze((k) => { k.sperre = -1; });
-  setze((k) => { k.v = 2; });
+  setze((k) => { k.v = 1; });
+  setze((k) => { k.v = 3; });
   setze((k) => { delete k.v; });
-  setze((k) => { k.docks = []; });
-  setze((k) => { k.docks = 'x'; });
-  setze((k) => { k.docks = Array.from({ length: L.MAX_DOCKS + 1 }, () => k.docks[0]); });
-  setze((k) => { k.docks[0] = null; });
-  setze((k) => { k.docks[0].f = 3; });
-  setze((k) => { k.docks[0].f = 0.5; });
-  setze((k) => { k.docks[0].p = 1; });
-  setze((k) => { k.docks[0].p = -0.1; });
-  setze((k) => { k.docks[0].p = NaN; });
-  setze((k) => { k.turm = 1; k.docks[0].f = 2; });
-  setze((k) => { k.turm = L.MAX_STUFE + 1; });
-  setze((k) => { k.turm = 0; });
-  setze((k) => { k.kran.tempo = L.MAX_STUFE + 1; });
-  setze((k) => { k.kran.kap = 1.5; });
-  setze((k) => { k.kran = null; });
-  setze((k) => { k.schiff.groesse = 0; });
-  setze((k) => { k.schiff = []; });
+  setze((k) => { k.ebenen = []; });
+  setze((k) => { k.ebenen = 'x'; });
+  setze((k) => { k.ebenen = Array.from({ length: L.MAX_EBENEN + 1 }, () => k.ebenen[0]); });
+  setze((k) => { k.ebenen[0] = null; });
+  setze((k) => { k.ebenen[0] = []; });
+  setze((k) => { k.ebenen[0].kran = 0; });
+  setze((k) => { k.ebenen[0].schiff = L.MAX_STUFE + 1; });
+  setze((k) => { k.ebenen[0].lager = 1.5; });
+  setze((k) => { k.ebenen[0].lotse = 2; });
+  setze((k) => { k.ebenen[0].p = 1; });
+  setze((k) => { k.ebenen[0].p = -0.1; });
+  setze((k) => { k.ebenen[0].p = NaN; });
+  setze((k) => { k.ebenen[0].puffer = -1; });
+  setze((k) => { k.ebenen[0].puffer = 1e6; });
+  setze((k) => { k.ebenen[0].puffer = NaN; });
   setze((k) => { k.halle = 0; });
-  setze((k) => { k.lotse = 2; });
-  setze((k) => { k.lotse = true; });
-  setze((k) => { k.lager = [0, 0]; });
-  setze((k) => { k.lager = [0, 0, -1]; });
-  setze((k) => { k.lager = [NaN, 0, 0]; });
-  setze((k) => { k.lager = [1e9, 0, 0]; });
-  setze((k) => { k.lager = 'abc'; });
+  setze((k) => { k.halle = L.MAX_STUFE + 1; });
+  setze((k) => { k.turm = 0; });
+  setze((k) => { k.haupt = [0]; });
+  setze((k) => { k.haupt = 'abc'; });
+  setze((k) => { k.haupt[0] = -1; });
+  setze((k) => { k.haupt[0] = NaN; });
+  setze((k) => { k.haupt[0] = 1e9; });
+  setze((k) => { k.haupt[7] = 1; k.ebenen = k.ebenen.slice(0, 1); });
   for (const f of falsch) gleich(L.istGueltig(f), false, JSON.stringify(f).slice(0, 90));
   for (const f of [null, undefined, 0, 'x', [], {}, true, 12, () => 1]) gleich(L.istGueltig(f), false, String(f));
-  // Zusatzfelder werden nicht übernommen
   const mit = kopie();
   mit.extra = '<b>x</b>';
-  mit.docks[0].extra = 1;
-  mit.kran.extra = 1;
+  mit.ebenen[0].extra = 1;
   const sauber = L.ausSpeicher(mit);
   gleich('extra' in sauber, false);
-  gleich('extra' in sauber.docks[0], false);
-  gleich('extra' in sauber.kran, false);
+  gleich('extra' in sauber.ebenen[0], false);
+  const alt = { v: 1, t: 1, uhr: 0, sperre: 0, geld: 5, gesamt: 5, docks: [{ f: 0, p: 0 }], kran: { tempo: 1, kap: 1 }, halle: 1, schiff: { groesse: 1, haeufig: 1 }, turm: 1, lotse: 0, lager: [0, 0, 0] };
+  gleich(L.istGueltig(alt), false);
+  gleich(modul.standVersion, 2);
 });
 
 test('Spielstand: Zufallsbelastung (Fuzz) wirft nie etwas anderes als einen Fehler', () => {
@@ -392,49 +446,76 @@ async function mit(stand, fn, zaehler = {}) {
 test('Modul: Metadaten', () => {
   gleich(modul.id, 'hafen');
   gleich(modul.name, 'Hafen');
-  gleich(modul.standVersion, 1);
+  gleich(modul.standVersion, 2);
   tief(modul.varianten, [{ id: 'standard', name: 'Standard' }]);
 });
 
-test('Oberfläche: frischer Start, Rückgängig gibt es nicht, Stand JSON-tauglich', async () => {
+test('Oberfläche: frischer Start, feste Geldleiste, Rückgängig gibt es nicht, Stand JSON-tauglich', async () => {
   await mit(null, async (i, c) => {
-    gleich(c.querySelectorAll('.ha-dock').length, 1);
-    wahr(c.querySelectorAll('.ha-kauf').length >= 7);
+    gleich(c.querySelectorAll('.ha-ebene').length, 1);
+    wahr(c.querySelector('.ha-leiste .ha-geld-wert') && c.querySelector('.ha-leiste .ha-rate') && c.querySelector('.ha-leiste .ha-ziel-text'), 'Leiste mit Geld, Einkommen, Ziel');
+    // Upgrades liegen in der Ebenen-Karte, nicht in einer langen Liste
+    gleich(c.querySelectorAll('.ha-ebene .ha-kauf').length, 4);
+    gleich(c.querySelectorAll('.ha-anlagen .ha-kauf').length, 2);
+    gleich(c.querySelectorAll('.ha-ebene .ha-messer').length, 3, 'Schiff, Dock-Lager, Verkauf');
     gleich(i.kannRueckgaengig(), false);
     gleich(i.rueckgaengig(), false);
     const st = i.getStand();
     tief(JSON.parse(JSON.stringify(st)), st);
     wahr(L.istGueltig(st));
     wahr(i.zusammenfassung().includes('Münzen'));
-    wahr(c.querySelector('.ha-ziel-text').textContent.length > 5);
     wahr(c.querySelector('.ha-weg').hidden, 'kein Abwesenheitshinweis beim Neustart');
     for (const b of c.querySelectorAll('.ha-kauf')) {
       wahr(b.getAttribute('aria-label'), 'aria-label');
       gleich(b.tagName, 'BUTTON');
     }
     wahr(c.querySelector('.ha-schiff').getAttribute('aria-label'));
+    wahr(c.querySelector('.ha-ebene .ha-kauf-wirkung').textContent.includes('→'), 'Effekt-Vorschau');
+  });
+});
+
+test('Oberfläche: Knöpfe und Anzeigen werden pro Tick nicht neu aufgebaut (Klicks gehen nicht verloren)', async () => {
+  await mit(null, async (i, c) => {
+    const knoten = [...c.querySelectorAll('button, .ha-balken, .ha-zahl')];
+    const kranKnopf = c.querySelector('[data-was="e0:kran"]');
+    wahr(knoten.length > 8);
+    await warte(900);
+    const danach = [...c.querySelectorAll('button, .ha-balken, .ha-zahl')];
+    gleich(danach.length, knoten.length);
+    wahr(knoten.every((k, n) => k === danach[n]), 'gleiche Knoten');
+    gleich(c.querySelector('[data-was="e0:kran"]'), kranKnopf);
+    // Kaufen mitten im Tick-Betrieb: Klick wirkt, Knopf bleibt derselbe
+    const z = L.neuerHafen(Date.now());
+    z.geld = 1e6;
+    await mit(L.zumSpeichern(z, Date.now()), async (j, d) => {
+      const kn = d.querySelector('[data-was="e0:kran"]');
+      await warte(450);
+      kn.click();
+      await warte(450);
+      kn.click();
+      gleich(j.getStand().ebenen[0].kran, 3);
+      gleich(d.querySelector('[data-was="e0:kran"]'), kn);
+    });
   });
 });
 
 test('Oberfläche: zu teure Knöpfe sind aria-disabled; Kaufen zieht Geld ab und meldet die Änderung', async () => {
   const z = L.neuerHafen(Date.now());
-  z.geld = L.preis(z, 'kran:tempo') + 1;
+  z.geld = L.preis(z, 'e0:kran') + 1;
   const zaehler = {};
   await mit(L.zumSpeichern(z, Date.now()), async (i, c) => {
-    const tempo = c.querySelector('[data-was="kran:tempo"]');
-    const halle = c.querySelector('[data-was="turm"]');
-    const lotse = c.querySelector('[data-was="lotse"]');
-    gleich(tempo.getAttribute('aria-disabled'), 'false');
+    const kran = c.querySelector('[data-was="e0:kran"]');
+    const lotse = c.querySelector('[data-was="e0:lotse"]');
+    gleich(kran.getAttribute('aria-disabled'), 'false');
     gleich(lotse.getAttribute('aria-disabled'), 'true');
     lotse.click();
-    gleich(i.getStand().lotse, 0, 'zu teuer → nichts gekauft');
+    gleich(i.getStand().ebenen[0].lotse, 0, 'zu teuer → nichts gekauft');
     wahr((zaehler.meldungen || 0) >= 1, 'Hinweis „zu wenig Münzen“');
-    tempo.click();
-    gleich(i.getStand().kran.tempo, 2);
+    kran.click();
+    gleich(i.getStand().ebenen[0].kran, 2);
     wahr(i.getStand().geld < z.geld, 'Geld abgebucht');
     wahr((zaehler.aenderungen || 0) >= 1, 'meldeAenderung');
-    wahr(halle !== null);
-    wahr(c.querySelector('[data-was="kran:tempo"] .ha-kauf-stufe').textContent.includes('2'));
+    wahr(c.querySelector('[data-was="e0:kran"] .ha-kauf-stufe').textContent.includes('2'));
   }, zaehler);
 });
 
@@ -450,25 +531,22 @@ test('Oberfläche: Taste K kauft das Nächste Ziel; andere Tasten gehören der S
   });
 });
 
-test('Oberfläche: Docks erscheinen nach dem Kauf, Fracht lässt sich wechseln, Antippen gibt Schub', async () => {
+test('Oberfläche: neue Ebene erscheint nach dem Kauf mit eigener Karte; Antippen gibt Schub; Neuer Hafen', async () => {
   const z = L.neuerHafen(Date.now());
   z.geld = 1e6;
-  z.turm = 5;
   await mit(L.zumSpeichern(z, Date.now()), async (i, c) => {
-    c.querySelector('[data-was="dock"]').click();
-    gleich(c.querySelectorAll('.ha-dock').length, 2);
-    gleich(i.getStand().docks[1].f, 1);
-    c.querySelectorAll('.ha-fracht')[0].click();
-    gleich(i.getStand().docks[0].f, 1);
-    wahr(c.querySelector('.ha-fracht').textContent.includes('Fisch'));
-    const vorher = i.getStand().lager.reduce((a, b) => a + b, 0);
+    c.querySelector('[data-was="ebene"]').click();
+    gleich(c.querySelectorAll('.ha-ebene').length, 2);
+    gleich(c.querySelectorAll('.ha-ebene .ha-kauf').length, 8);
+    wahr(c.querySelectorAll('.ha-ebene')[1].textContent.includes('Fisch'));
+    c.querySelector('[data-was="e1:kran"]').click();
+    gleich(i.getStand().ebenen[1].kran, 2);
     c.querySelector('.ha-schiff').click();
     wahr(i.getStand().sperre > 0, 'Schub ausgelöst');
-    wahr(i.getStand().lager.reduce((a, b) => a + b, 0) >= vorher);
     await warte(700);
     wahr(i.getStand().geld !== 1e6, 'Tick rechnet');
     i.neu();
-    gleich(c.querySelectorAll('.ha-dock').length, 1, 'Neuer Hafen');
+    gleich(c.querySelectorAll('.ha-ebene').length, 1, 'Neuer Hafen');
     gleich(i.getStand().geld, 0);
   });
 });
@@ -484,12 +562,10 @@ test('Oberfläche: Abwesenheit wird beim Öffnen verrechnet und angezeigt', asyn
     c.querySelector('.ha-weg .knopf').click();
     wahr(c.querySelector('.ha-weg').hidden, 'Hinweis schließbar');
   });
-  // Zeitstempel weit in der Zukunft: Stand wird verworfen → neuer Hafen
   await mit(L.zumSpeichern(z, jetzt + 5 * 24 * 3600_000), async (i, c) => {
     gleich(i.getStand().geld, 0);
     wahr(c.querySelector('.ha-weg').hidden);
   });
-  // leicht in der Zukunft: kein Gewinn, kein Hinweis
   await mit(L.zumSpeichern(z, jetzt + 3600_000), async (i, c) => {
     wahr(i.getStand().geld < vorher + 5 * L.einkommen(z));
     wahr(c.querySelector('.ha-weg').hidden);
@@ -512,7 +588,7 @@ test('Oberfläche: Pause und Fortsetzen (versteckter Tab) rechnen nach', async (
     i.fortsetze();
     wahr(i.getStand().geld >= g);
     i.zerstoere();
-    i.fortsetze();   // nach dem Zerstören nichts mehr tun
+    i.fortsetze();
   });
 });
 
@@ -523,8 +599,8 @@ test('Robustheit: kaputte und manipulierte Spielstände', async () => {
   const faelle = [null, 0, 'x', [], {}, { version: 1 }, { __proto__: null }, JSON.parse('{"__proto__":{"verseucht":1}}')];
   const werte = [BOESE, -1, 1e12, null, [], {}, [BOESE], { a: BOESE }, true, 'NaN'];
   for (const k of Object.keys(gut)) for (const w of werte) faelle.push({ ...gut, [k]: w });
-  faelle.push({ ...gut, docks: [BOESE] });
-  faelle.push({ ...gut, docks: [{ f: BOESE, p: 0 }] });
+  faelle.push({ ...gut, ebenen: [BOESE] });
+  faelle.push({ ...gut, ebenen: [{ kran: BOESE, schiff: 1, lager: 1, lotse: 0, p: 0, puffer: 0 }] });
   const probleme = [];
   for (let n = 0; n < faelle.length; n++) {
     try {
@@ -549,4 +625,5 @@ test('Still: kein vibrate/Audio/eval/innerHTML, kein Zufall, keine Inline-Styles
   wahr(!/Date\.now|new Date|performance\.now/.test(l), 'logik.js: keine Uhr (Zeit kommt als Parameter)');
   const css = await fetch(new URL('../../spiele/hafen/stil.css', import.meta.url)).then((r) => r.text());
   wahr(!/#[0-9a-f]{3,8}\b/i.test(css), 'keine festen Farben im CSS');
+  wahr(/position:\s*sticky/.test(css), 'feste Geldleiste');
 });

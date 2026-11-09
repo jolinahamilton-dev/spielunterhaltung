@@ -1,5 +1,11 @@
 # Änderungen
 
+## 1.5.1 – 09.11.2026
+- Übersicht: Die Bildlaufposition wird gemerkt – nach einem Spiel steht die Übersicht wieder an derselben Stelle
+- Schachtbetrieb überarbeitet: Geld, Einkommen und nächstes Ziel stehen in einer festen Leiste oben; Mengen je Station mit Füllbalken (Schachtlager, Aufzug, Eingangslager im Verkaufszentrum); die Kiste ist das Schachtlager auf der Aufzugsseite; Upgrades sitzen direkt an der jeweiligen Station
+- Hafen überarbeitet: jede Ebene ist eine eigene Ressource (8 Ebenen, die nächste wird freigekauft); Upgrades an der Ebene; Mengen auf Schiff, im Dock-Lager und im Verkauf mit Balken; feste Geldleiste. Achtung: ein alter Hafen-Spielstand wird verworfen, es beginnt ein neuer Hafen
+
+
 ## 1.5.0 – 08.11.2026
 - Neu: **Punkte verbinden** (gleichfarbige Punkte zu Ketten ziehen, Schleifen räumen eine ganze Farbe; endlos oder mit Zielen)
 - Neu: **Schrauben** (Schrauben lösen, Bretter fallen lassen, Kisten füllen; Leicht/Mittel/Schwer)

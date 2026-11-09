@@ -46,9 +46,17 @@ navigator.storage?.persist?.().catch(() => {});
 const wurzel = document.getElementById('app');
 let ansicht = null;
 let routenZaehler = 0;
+// Bildlaufposition der Übersicht merken: Wer aus einem Spiel zurückkommt, steht wieder an derselben Stelle
+let letzteRoute = null;
+let startScroll = 0;
+try { startScroll = Math.max(0, Number(sessionStorage.getItem('spielunterhaltung:startScroll')) || 0); } catch { /* egal */ }
 
 beobachteRoute(async (route) => {
   const nummer = ++routenZaehler;
+  if (letzteRoute === 'start') {
+    startScroll = Math.round(window.scrollY);
+    try { sessionStorage.setItem('spielunterhaltung:startScroll', String(startScroll)); } catch { /* egal */ }
+  }
   try { ansicht?.verlasse(); } catch (f) { console.error(f); }
   ansicht = null;
 
@@ -71,7 +79,8 @@ beobachteRoute(async (route) => {
   // Wurde inzwischen schon weiternavigiert, die veraltete Ansicht gleich wieder verlassen
   if (nummer !== routenZaehler) { neu?.verlasse(); return; }
   ansicht = neu;
-  window.scrollTo(0, 0);
+  letzteRoute = route.name;
+  window.scrollTo(0, route.name === 'start' ? startScroll : 0);
   ansicht?.fokus?.focus({ preventScroll: true });
 });
 

@@ -1,7 +1,9 @@
-/* Schachtbetrieb. Alles untereinander (ab 360 px), links läuft die Aufzugschiene. */
+/* Schachtbetrieb. Oben eine feste Leiste (Geld, Einkommen, nächstes Ziel), darunter Karten je Station.
+   Links läuft die Aufzugschiene; die Schachtlager (Kisten) stehen auf der Aufzugsseite der Schachtkarten. */
 .sb {
-  --schiene: 44px;
+  --schiene: 40px;
   display: grid;
+  align-content: start;
   gap: var(--a3);
   width: 100%;
   max-width: 560px;
@@ -9,30 +11,45 @@
   padding-bottom: var(--a5);
   user-select: none;
   -webkit-user-select: none;
+  font-variant-numeric: tabular-nums;
 }
 .sb [hidden] { display: none !important; }
 
-.sb-kopf { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--a1) var(--a3); }
-.sb-geld { font-size: 1.7rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.sb-einheit { font-size: 1rem; font-weight: 500; color: var(--text-leise); }
-.sb-rate { font-size: .9rem; }
-
-.sb-ziel {
-  display: grid; grid-template-columns: 1fr auto; gap: var(--a1) var(--a3); align-items: center;
-  padding: var(--a3); border: 1px solid var(--rand); border-radius: var(--radius);
-  background: var(--akzent-sanft);
+/* ---------- Feste Leiste ---------- */
+.sb-leiste {
+  position: sticky; top: 0; z-index: 30;
+  display: grid; gap: var(--a1);
+  padding: var(--a2) var(--a3);
+  background: var(--flaeche);
+  border: 1px solid var(--rand); border-radius: var(--radius);
+  box-shadow: var(--schatten);
 }
-.sb-ziel-titel { grid-column: 1 / -1; font-size: .8rem; font-weight: 600; letter-spacing: .02em; color: var(--text-leise); }
-.sb-ziel-text { font-size: .95rem; min-width: 0; overflow-wrap: anywhere; }
+.sb-leiste-zeile { display: flex; align-items: center; justify-content: space-between; gap: var(--a3); min-width: 0; }
+.sb-geld { display: flex; align-items: baseline; gap: var(--a2); min-width: 0; }
+.sb-geld-wert { font-size: 1.6rem; font-weight: 700; line-height: 1.2; }
+.sb-einheit { font-size: .9rem; color: var(--text-leise); }
+.sb-rate { font-size: .9rem; color: var(--text-leise); white-space: nowrap; }
+.sb-ziel { padding-top: var(--a1); border-top: 1px solid var(--rand); align-items: center; }
+.sb-ziel-box { display: grid; min-width: 0; flex: 1; }
+.sb-ziel-titel { font-size: .7rem; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--text-leise); }
+.sb-ziel-text {
+  font-size: .85rem; line-height: 1.25; min-height: 2.5em; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.sb-ziel-knopf { flex: none; min-width: 5.5rem; }
+.sb-ziel-knopf[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
+.sb-ziel-knopf.bereit { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); }
 
 .sb-weg {
   display: flex; align-items: center; justify-content: space-between; gap: var(--a3);
   padding: var(--a2) var(--a3); border-radius: var(--radius);
-  background: var(--flaeche-2); border: 1px solid var(--rand);
+  background: var(--akzent-sanft); border: 1px solid var(--rand);
 }
 .sb-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; }
 
+/* ---------- Mine ---------- */
 .sb-mine { position: relative; display: grid; gap: var(--a2); }
+.sb-schaechte { display: grid; gap: var(--a2); }
 .sb-schiene {
   position: absolute; left: 0; top: 0; width: var(--schiene);
   border-inline: 2px dashed var(--rand); border-radius: var(--radius-klein);
@@ -45,7 +62,7 @@
   transition: transform 220ms linear;
 }
 .sb-kabine-last { position: absolute; inset: 5px 8px; border-radius: 3px; background: var(--akzent); opacity: .6; }
-.sb-still .sb-kabine { transition: none; }
+.sb-still .sb-kabine, .sb-still .sb-fuell { transition: none; }
 
 .sb-zeile {
   margin-left: calc(var(--schiene) + var(--a2));
@@ -55,22 +72,41 @@
   background: var(--flaeche); box-shadow: var(--schatten);
 }
 .sb-schacht { border-left: 5px solid var(--sb-farbe, var(--akzent)); }
-.sb-zeile-kopf { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--a1) var(--a2); min-width: 0; }
-.sb-zeile-kopf.zweit { font-size: .85rem; color: var(--text-leise); }
+.sb-zeile-kopf { display: flex; align-items: center; justify-content: space-between; gap: var(--a2); min-width: 0; }
 .sb-titelzeile { display: flex; align-items: center; gap: var(--a2); min-width: 0; }
-.sb-titel { margin: 0; font-size: 1rem; font-weight: 650; overflow-wrap: anywhere; }
-.sb-zeile-info { font-size: .85rem; color: var(--text-leise); font-variant-numeric: tabular-nums; }
+.sb-titel { margin: 0; font-size: 1rem; font-weight: 650; overflow-wrap: anywhere; line-height: 1.2; }
+.sb-zeile-info { font-size: .82rem; color: var(--text-leise); }
+.sb-ikone { flex: none; width: 22px; height: 22px; fill: none; stroke: var(--akzent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sb-schacht .sb-ikone { stroke: var(--text); }
 .sb-symbol-halter { display: inline-flex; }
 .sb-symbol { width: 16px; height: 16px; fill: var(--sb-farbe); stroke: var(--text); stroke-width: .4; }
-.sb-anschub { min-height: 36px; }
+.sb-anschub { flex: none; min-height: 36px; }
 
-/* Gang des Schachts: Bergleute laufen zur Kiste */
-.sb-gang {
-  display: grid; grid-template-columns: 1fr 44px; gap: var(--a2); align-items: stretch;
-  height: 44px;
+/* Mengen: Beschriftung links, „x / Kapazität Erz“ rechts, darunter der Balken */
+.sb-menge { display: grid; gap: 4px; }
+.sb-menge-kopf { display: flex; align-items: baseline; justify-content: space-between; gap: var(--a2); font-size: .85rem; }
+.sb-menge-titel { color: var(--text-leise); }
+.sb-menge-wert { font-weight: 650; white-space: nowrap; text-align: right; }
+.sb-balken {
+  position: relative; display: block; height: 12px; overflow: hidden;
+  border: 1px solid var(--rand); border-radius: 99px; background: var(--flaeche-2);
 }
+.sb-balken .sb-fuell { display: block; height: 100%; width: 0; background: var(--akzent); transition: width 200ms linear; }
+
+/* Schacht: links das Schachtlager an der Aufzugsseite, rechts die Bergleute */
+.sb-schacht-mitte { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: var(--a3); align-items: stretch; }
+.sb-lager { display: grid; justify-items: center; gap: 4px; align-content: start; }
+.sb-lager-titel { font-size: .72rem; color: var(--text-leise); }
+.sb-kiste {
+  position: relative; display: block; width: 100%; height: 52px; overflow: hidden;
+  border: 2px solid var(--text); border-radius: 4px 4px 8px 8px; background: var(--flaeche-2);
+}
+.sb-kiste .sb-fuell { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: var(--sb-farbe, var(--akzent)); transition: height 200ms linear; }
+.sb-kiste.voll { border-color: var(--fehler); }
+.sb-kiste-wert { font-size: .78rem; font-weight: 650; white-space: nowrap; }
+.sb-gang { display: grid; grid-template-rows: auto 1fr; gap: var(--a2); min-width: 0; }
 .sb-punkte {
-  position: relative; border-radius: var(--radius-klein); overflow: hidden;
+  position: relative; min-height: 40px; border-radius: var(--radius-klein); overflow: hidden;
   background: var(--flaeche-2);
   background-image: repeating-linear-gradient(90deg, transparent 0 18px, var(--rand) 18px 20px);
 }
@@ -78,7 +114,6 @@
   position: absolute; bottom: 6px; left: 4px; width: 12px; height: 18px;
   border-radius: 6px 6px 3px 3px; background: var(--sb-farbe, var(--akzent));
   border: 2px solid var(--text); box-sizing: border-box;
-  top: auto;
   transform: translateY(calc(var(--reihe, 0) * -10px));
   animation: sb-lauf var(--lauf, 12s) linear infinite;
   animation-delay: var(--vers, 0s);
@@ -88,50 +123,40 @@
   50% { left: calc(100% - 16px); }
   100% { left: 4px; }
 }
-.sb-kiste, .sb-balken {
-  position: relative; display: block; overflow: hidden;
-  border: 2px solid var(--text); border-radius: var(--radius-klein); background: var(--flaeche-2);
-}
-.sb-kiste .sb-fuell { position: absolute; left: 0; right: 0; bottom: 0; background: var(--sb-farbe, var(--akzent)); height: 0; transition: height 200ms linear; }
-.sb-balken { height: 14px; }
-.sb-balken .sb-fuell { display: block; height: 100%; width: 0; background: var(--akzent); transition: width 200ms linear; }
-.sb-still .sb-fuell { transition: none; }
-.sb-kiste-txt { font-size: .85rem; }
-
-.sb-bild { position: relative; display: grid; gap: var(--a2); }
+.sb-arbeiter-bahn { position: relative; flex: 1; max-width: 140px; height: 22px; }
 .sb-arbeiter {
-  display: block; width: 14px; height: 20px; border-radius: 7px 7px 3px 3px;
+  position: absolute; top: 1px; left: 0; display: block; width: 14px; height: 20px; border-radius: 7px 7px 3px 3px;
   background: var(--akzent); border: 2px solid var(--text); box-sizing: border-box;
-  position: relative; animation: sb-hin var(--lauf, 6s) ease-in-out infinite alternate;
+  animation: sb-hin var(--lauf, 6s) ease-in-out infinite alternate;
 }
 @keyframes sb-hin { from { left: 0; } to { left: calc(100% - 14px); } }
 .sb-still .sb-bergmann, .sb-still .sb-arbeiter { animation: none; }
 .sb-still .sb-bergmann { left: calc(4px + var(--reihe, 0) * 4px); }
 
-/* Kaufknöpfe */
+/* Kaufknöpfe: Name, Stufe, Wirkung, Preis */
 .sb-knoepfe { display: grid; gap: var(--a2); }
 .sb-knoepfe.drei { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .sb-knoepfe.zwei { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .sb-kauf {
-  display: grid; gap: 2px; justify-items: center; align-content: center;
-  min-height: var(--treffer); padding: var(--a2) var(--a1);
+  display: grid; gap: 1px; justify-items: center; align-content: center;
+  min-height: 78px; padding: var(--a2) var(--a1);
   font: inherit; color: var(--text); text-align: center;
   border: 1px solid var(--rand); border-radius: var(--radius-klein);
   background: var(--flaeche-2); cursor: pointer;
 }
-.sb-kauf-name { font-size: .8rem; font-weight: 600; }
-.sb-kauf-stufe { font-size: .72rem; color: var(--text-leise); }
-.sb-kauf-preis { font-size: .9rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.sb-kauf[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
+.sb-kauf-name { font-size: .8rem; font-weight: 650; }
+.sb-kauf-stufe { font-size: .7rem; color: var(--text-leise); }
+.sb-kauf-effekt { font-size: .7rem; font-weight: 600; color: var(--erfolg); line-height: 1.2; }
+.sb-kauf-preis { font-size: .9rem; font-weight: 700; }
+.sb-kauf[aria-disabled="true"] { opacity: .6; cursor: not-allowed; }
 .sb-kauf.bereit { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); }
-.sb-kauf.bereit .sb-kauf-stufe { color: inherit; opacity: .85; }
+.sb-kauf.bereit .sb-kauf-stufe, .sb-kauf.bereit .sb-kauf-effekt { color: inherit; opacity: .9; }
 .sb-kauf.blitz { outline: 3px solid var(--erfolg); outline-offset: 1px; }
 .sb-kauf:focus-visible, .sb .knopf:focus-visible { outline: 3px solid var(--fokus); outline-offset: 2px; }
-.sb-ziel-knopf[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
-.sb-ziel-knopf.bereit { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); }
 
 .sb-neuer-zeile { margin-left: calc(var(--schiene) + var(--a2)); }
-.sb-neuer { width: 100%; grid-template-columns: 1fr; border-style: dashed; padding: var(--a3); font-weight: 600; }
+.sb-neuer { width: 100%; min-height: 56px; border-style: dashed; font-weight: 600; }
+.sb-neuer-effekt { font-size: .75rem; font-weight: 600; opacity: .9; }
 .sb-fuss { display: flex; justify-content: center; padding-top: var(--a3); }
 
 @media (prefers-reduced-motion: reduce) {
@@ -139,6 +164,8 @@
   .sb-kabine, .sb-fuell { transition: none; }
 }
 @media (max-width: 400px) {
-  .sb { --schiene: 32px; }
+  .sb { --schiene: 28px; }
   .sb-zeile { padding: var(--a2); }
+  .sb-schacht-mitte { grid-template-columns: 76px minmax(0, 1fr); gap: var(--a2); }
+  .sb-geld-wert { font-size: 1.4rem; }
 }
