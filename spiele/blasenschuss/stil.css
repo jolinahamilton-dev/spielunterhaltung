@@ -1,0 +1,53 @@
+/* Blasenschuss: Hochformat-Feld, Breite hängt an Fenster und Höhe. */
+.bs {
+  --bs-b: clamp(280px, min(100%, calc((100dvh - 250px) * 0.706)), 520px);
+  display: grid;
+  justify-items: center;
+  gap: var(--a3);
+  width: 100%;
+  align-self: flex-start;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.bs-info {
+  width: var(--bs-b);
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--a1) var(--a4);
+  min-height: 2rem;
+}
+.bs-titel { font-weight: 650; font-size: 1.1rem; }
+.bs-wert { font-weight: 600; font-variant-numeric: tabular-nums; }
+.bs-rest { font-size: .85rem; }
+
+.bs-feld {
+  width: var(--bs-b);
+  height: auto;
+  aspect-ratio: 18 / 25.5;
+  display: block;
+  touch-action: none;
+  cursor: crosshair;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.bs-feld:focus-visible { outline: 3px solid var(--fokus); outline-offset: 3px; }
+.bs-hg { fill: var(--flaeche); stroke: var(--rand); stroke-width: .25; }
+.bs-linie { stroke: var(--rand); stroke-width: .12; stroke-dasharray: .5 .5; }
+.bs-farbe { stroke: rgb(20 25 30 / .35); stroke-width: .1; }
+.bs-glanz { fill: #fff; opacity: .4; }
+.bs-symbol { fill: rgb(20 25 30 / .78); stroke: rgb(255 255 255 / .55); stroke-width: .3; paint-order: stroke; pointer-events: none; }
+.bs-symbol.hell { fill: #fff; stroke: rgb(20 25 30 / .6); }
+.bs-stein { fill: var(--flaeche-2); stroke: var(--text-leise); stroke-width: .16; }
+.bs-riss { stroke: var(--text-leise); stroke-width: .16; stroke-linecap: round; fill: none; }
+.bs-bombe { fill: #2b2f36; stroke: #fff; stroke-width: .1; }
+.bs-funke { stroke: #fff; stroke-width: .16; stroke-linecap: round; fill: none; }
+.bs-regenbogen { stroke: rgb(20 25 30 / .45); stroke-width: .1; }
+.bs-sockel { fill: var(--flaeche-2); stroke: var(--rand); stroke-width: .12; }
+.bs-pfeil { stroke: var(--akzent); stroke-width: .3; stroke-linecap: round; fill: none; }
+.bs-zielpfad { fill: none; stroke: var(--text-leise); stroke-width: .17; stroke-dasharray: .5 .55; stroke-linecap: round; opacity: .8; }
+.bs-zielpfad.hinweis { stroke: var(--akzent); stroke-width: .24; opacity: 1; }
+.bs-zielfeld { fill: none; stroke: var(--text-leise); stroke-width: .14; stroke-dasharray: .4 .4; opacity: .85; }
+.bs-zielfeld.hinweis { stroke: var(--akzent); stroke-width: .22; }
+.bs-tausch { fill: transparent; cursor: pointer; }
+.bs-beschriftung { font-size: .8px; fill: var(--text-leise); pointer-events: none; font-family: var(--schrift); }
+
+.bs-aktionen { width: var(--bs-b); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--a2); }
+.bs-status { margin: 0; font-size: .85rem; min-height: 1.2em; }

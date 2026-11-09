@@ -215,3 +215,12 @@ a.kachel:hover { border-color: var(--akzent); transform: translateY(-1px); }
   .kopfleiste { padding: var(--a1) var(--a2); gap: var(--a1); }
   .spielflaeche { padding: var(--a2); }
 }
+
+/* Reihenfolge der Spiele (Startseite) */
+.start-leiste { display: flex; flex-wrap: wrap; gap: var(--a2); align-items: center; justify-content: space-between; margin-bottom: var(--a3); }
+.start-modi { display: flex; flex-wrap: wrap; gap: var(--a1); }
+.start-leiste .knopf.aktiv { border-color: var(--akzent); box-shadow: inset 0 0 0 1px var(--akzent); }
+.kachel.anordnen { position: relative; }
+.kachel-schieber { position: absolute; top: var(--a2); right: var(--a2); display: flex; gap: var(--a1); }
+.kachel-schieber .knopf { min-width: 40px; min-height: 40px; font-size: 1.1rem; }
+.kachel-schieber .knopf:disabled { opacity: .35; }

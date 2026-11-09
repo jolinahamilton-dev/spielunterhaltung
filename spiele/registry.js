@@ -104,6 +104,24 @@ export const SPIELE = [
     laden: () => import('./solitaer/index.js'),
   },
   {
+    id: 'ziegelbruch', name: 'Ziegelbruch', symbol: SPIEL_SYMBOLE.ziegelbruch,
+    beschreibung: 'Bälle schießen und Blöcke Stück für Stück abbauen – mit Leveln und endlos.',
+    laden: () => import('./ziegelbruch/index.js'),
+    kachelText(speicher) {
+      const r = speicher.lies('rekord-endlos', 0);
+      return Number.isInteger(r) && r > 0 ? `Rekord ${r.toLocaleString('de-DE')} Reihen` : '';
+    },
+  },
+  {
+    id: 'blasenschuss', name: 'Blasenschuss', symbol: SPIEL_SYMBOLE.blasenschuss,
+    beschreibung: 'Gleichfarbige Blasen abschießen – lose Blasen fallen ab. Mit Leveln und endlos.',
+    laden: () => import('./blasenschuss/index.js'),
+    kachelText(speicher) {
+      const r = speicher.lies('rekord', 0);
+      return Number.isInteger(r) && r > 0 ? `Rekord ${r.toLocaleString('de-DE')}` : '';
+    },
+  },
+  {
     id: 'test-raster', name: 'Lichter (Test)', symbol: SPIEL_SYMBOLE.test, entwicklung: true,
     beschreibung: 'Prüfspiel für das Grundgerüst: alle Felder ausschalten.',
     laden: () => import('./test-raster/index.js'),

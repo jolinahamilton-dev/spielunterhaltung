@@ -9,7 +9,8 @@ import { zeigeStartseite } from './startseite.js';
 import { zeigeSpiel } from './spielansicht.js';
 import { zeigeEinstellungen, zeigeStatistik, zeigeInfo } from './seiten.js';
 import { starteServiceWorker, erstelleInstallation } from './update.js';
-import { findeSpiel } from '../spiele/registry.js';
+import { findeSpiel, SPIELE } from '../spiele/registry.js';
+import { erstelleUebersicht } from './uebersicht.js';
 
 const meldungen = h('div', { class: 'meldungen', 'aria-live': 'polite' });
 document.body.append(meldungen);
@@ -38,6 +39,7 @@ const app = {
   speicher, einstellungen, statistik, meldung,
   farben: erstelleFarben(einstellungen),
   installation: erstelleInstallation(),
+  uebersicht: erstelleUebersicht(speicher, SPIELE.map((s) => s.id)),
 };
 
 // Browser bitten, die Spielstände nicht bei Platzmangel zu löschen
@@ -65,6 +67,7 @@ beobachteRoute(async (route) => {
     if (route.name === 'spiel') {
       const eintrag = findeSpiel(route.id);
       if (!eintrag || typeof eintrag.laden !== 'function') { location.replace('#/'); return; }
+      app.uebersicht.benutzt(eintrag.id);
       neu = await zeigeSpiel(wurzel, eintrag, app);
     } else if (route.name === 'einstellungen') neu = zeigeEinstellungen(wurzel, app);
     else if (route.name === 'statistik') neu = zeigeStatistik(wurzel, app);

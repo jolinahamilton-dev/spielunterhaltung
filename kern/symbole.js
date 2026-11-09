@@ -106,6 +106,22 @@ export const SPIEL_SYMBOLE = Object.freeze({
     <g transform="rotate(14 31 26)"><rect x="19" y="7" width="21" height="31" rx="3.5" fill="#fdfbf6" stroke="currentColor" stroke-width="1.6"/>
     <path d="M29.5 31.5C26.2 29 25.2 27.5 25.2 26.2a2.3 2.3 0 0 1 4.3-1.1 2.3 2.3 0 0 1 4.3 1.1c0 1.3-1 2.8-4.3 5.3Z" fill="var(--spielfarbe-0)"/>
     <text x="23.5" y="16.5" font-size="8" fill="var(--spielfarbe-0)" font-family="system-ui" font-weight="700">A</text></g>`),
+  ziegelbruch: kachel(`
+    <rect x="5" y="6" width="12" height="9" rx="2" fill="var(--akzent)"/>
+    <rect x="18" y="6" width="12" height="9" rx="2" fill="var(--spielfarbe-3)"/>
+    <rect x="31" y="6" width="12" height="9" rx="2" fill="var(--spielfarbe-5)"/>
+    <rect x="11.5" y="17" width="12" height="9" rx="2" fill="var(--spielfarbe-5)"/>
+    <rect x="24.5" y="17" width="12" height="9" rx="2" fill="var(--akzent)"/>
+    <path d="M24 42L35 22" stroke="currentColor" stroke-width="2" stroke-dasharray="3 3" stroke-linecap="round" fill="none"/>
+    <circle cx="24" cy="42" r="3.2" fill="currentColor"/>`),
+  blasenschuss: kachel(`
+    <g stroke="currentColor" stroke-width="1.2">
+      <circle cx="12" cy="11" r="5.6" fill="var(--spielfarbe-0)"/><circle cx="23.2" cy="11" r="5.6" fill="var(--spielfarbe-5)"/>
+      <circle cx="34.4" cy="11" r="5.6" fill="var(--spielfarbe-0)"/><circle cx="17.6" cy="20.7" r="5.6" fill="var(--spielfarbe-2)"/>
+      <circle cx="28.8" cy="20.7" r="5.6" fill="var(--spielfarbe-5)"/>
+    </g>
+    <path d="M24 33v-7" stroke="var(--akzent)" stroke-width="2" stroke-dasharray="2 2.4" fill="none"/>
+    <circle cx="24" cy="39.5" r="5.6" fill="var(--akzent)" stroke="currentColor" stroke-width="1.2"/>`),
   wortsuche: kachel(`
     <g font-family="system-ui" font-weight="700" font-size="9" text-anchor="middle" fill="currentColor" opacity=".55">
       <text x="9" y="13">K</text><text x="20" y="13">A</text><text x="31" y="13">T</text><text x="42" y="13">Z</text>

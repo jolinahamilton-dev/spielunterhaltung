@@ -1,11 +1,12 @@
 // Schachtbetrieb: Simulation ohne DOM und ohne Zufall.
-// Bestände (in Taler-Wert): Schachtkisten, Zentrum-Lager, Geld. Alles ist ein Fließmodell:
-//   Bergleute füllen die Kiste → der Aufzug trägt sie ins Lager → der Lagerarbeiter verkauft.
+// Eine Stufe je Station (Schacht, Aufzug, Zentrum). Bestände in Erz (1 Erz = 1 Taler beim Verkauf):
+//   Bergleute füllen das Schachtlager → der Aufzug trägt es ins Eingangslager → das Zentrum verkauft.
 
 export const MAX_SCHAECHTE = 10;
-export const MAX_BERGLEUTE = 20;
 export const MAX_STUFE = 40;
 export const MAX_GELD = 1e30;
+export const STAND_VERSION = 3;
+export const MAX_LEVEL = 9999;
 export const OFFLINE_MAX_S = 8 * 3600;   // Deckel für die Abwesenheit
 export const OFFLINE_FAKTOR = 0.5;       // ab OFFLINE_VOLL_S zählt nur die Hälfte
 export const OFFLINE_VOLL_S = 60;
@@ -16,21 +17,17 @@ const MAX_T = 4e12;                      // Zeitstempel-Grenze (Jahr ~2096)
 
 /** Alle Zahlen der Wachstumskurve an einer Stelle */
 export const KURVE = Object.freeze({
-  // Bergleute: Wert je Fahrt, Fahrzeit
-  wert0: 6, wertFaktor: 8, miner0: 12, tempoF: 1.1, tragF: 1.1,
-  // Aufzug
-  fahrt0: 3, fahrtJeSchacht: 5, aufzugTempoF: 1.2, aufzugLadung0: 60, aufzugLadungF: 1.5,
-  // Zentrum
-  zentrumZeit0: 6, zentrumTempoF: 1.2, zentrumLadung0: 100, zentrumLadungF: 1.5,
-  // Kosten: Basis · Wachstum^(Stufe−1) · Tiefenfaktor^Schacht
+  // Schacht k, Stufe s: alle drei Faktoren wachsen mit der Stufe, alle 3 Stufen kommt ein Bergmann dazu
+  wert0: 6, wertFaktor: 8, miner0: 12, bergleuteAlle: 3, tempoF: 1.05, tragF: 1.05,
+  // Aufzug, Stufe a
+  fahrt0: 3, fahrtJeSchacht: 2.5, aufzugTempoF: 1.1, aufzugLadung0: 60, aufzugLadungF: 1.15,
+  // Zentrum, Stufe c
+  zentrumZeit0: 6, zentrumTempoF: 1.1, zentrumLadung0: 100, zentrumLadungF: 1.15,
+  // Kosten: Basis · Wachstum^(Stufe−1) (· Tiefenfaktor^Schacht)
   kosten: {
-    n: { basis: 10, wachs: 1.7 },
-    tempo: { basis: 45, wachs: 1.5 },
-    trag: { basis: 35, wachs: 1.5 },
-    aufzugTempo: { basis: 180, wachs: 1.5 },
-    aufzugLadung: { basis: 160, wachs: 1.5 },
-    zentrumTempo: { basis: 220, wachs: 1.5 },
-    zentrumLadung: { basis: 200, wachs: 1.5 },
+    schachtStufe: { basis: 10, wachs: 1.24 },
+    aufzug: { basis: 200, wachs: 1.3 },
+    zentrum: { basis: 240, wachs: 1.3 },
     schacht: { basis: 300, wachs: 12 },
   },
   tiefe: 24,
@@ -39,17 +36,18 @@ export const KURVE = Object.freeze({
 });
 
 export const SCHACHT_NAMEN = Object.freeze([
-  'Kupferstollen', 'Zinnstollen', 'Eisenstollen', 'Silberstollen', 'Kohlestollen', 'Bleistollen',
-  'Goldstollen', 'Salzstollen', 'Quarzstollen', 'Opalstollen', 'Rubinstollen', 'Smaragdstollen',
+  'Kupfer', 'Zinn', 'Eisen', 'Silber', 'Kohle', 'Blei', 'Gold', 'Salz', 'Quarz', 'Opal',
 ]);
 
 // ---------- Zustand ----------
-export function neuesBergwerk(jetztMs = Date.now()) {
+export function neuesBergwerk(jetztMs = Date.now(), level = 0) {
+  const def = level > 0 ? levelDef(level) : null;
   return {
-    v: 1, t: sichereZeit(jetztMs), uhr: 0, sperre: 0, geld: 0, gesamt: 0,
-    aufzug: { tempo: 1, ladung: 1 },
-    zentrum: { tempo: 1, ladung: 1, lager: 0 },
-    schaechte: [{ n: 1, tempo: 1, trag: 1, kiste: 0 }],
+    v: STAND_VERSION, t: sichereZeit(jetztMs), uhr: 0, sperre: 0, geld: def ? def.geld : 0, gesamt: 0,
+    level: def ? level : 0, fertig: false, weiter: false,
+    aufzug: { stufe: 1 },
+    zentrum: { stufe: 1, lager: 0 },
+    schaechte: Array.from({ length: def ? def.schaechte : 1 }, () => ({ stufe: 1, kiste: 0 })),
   };
 }
 
@@ -59,10 +57,11 @@ function sichereZeit(ms) {
 
 export function kopie(z) {
   return {
-    v: 1, t: z.t, uhr: z.uhr, sperre: z.sperre, geld: z.geld, gesamt: z.gesamt,
-    aufzug: { tempo: z.aufzug.tempo, ladung: z.aufzug.ladung },
-    zentrum: { tempo: z.zentrum.tempo, ladung: z.zentrum.ladung, lager: z.zentrum.lager },
-    schaechte: z.schaechte.map((s) => ({ n: s.n, tempo: s.tempo, trag: s.trag, kiste: s.kiste })),
+    v: STAND_VERSION, t: z.t, uhr: z.uhr, sperre: z.sperre, geld: z.geld, gesamt: z.gesamt,
+    level: z.level, fertig: z.fertig, weiter: z.weiter,
+    aufzug: { stufe: z.aufzug.stufe },
+    zentrum: { stufe: z.zentrum.stufe, lager: z.zentrum.lager },
+    schaechte: z.schaechte.map((s) => ({ stufe: s.stufe, kiste: s.kiste })),
   };
 }
 
@@ -73,32 +72,33 @@ function zahl(x, min, max, ganz = false) {
   return x;
 }
 
-/** Streng prüfen und eine saubere Kopie liefern; wirft bei jedem Fehler */
+/** Streng prüfen und eine saubere Kopie liefern; wirft bei jedem Fehler (auch bei Ständen der Version 1) */
 export function ausSpeicher(o) {
-  if (!istObjekt(o) || o.v !== 1) throw new Error('kein Spielstand');
-  if (!Array.isArray(o.schaechte) || o.schaechte.length < 1 || o.schaechte.length > MAX_SCHAECHTE) throw new Error('Schächte');
+  if (!istObjekt(o) || o.v !== STAND_VERSION) throw new Error('kein Spielstand');
+  const level = zahl(o.level, 0, MAX_LEVEL, true);
+  if (typeof o.fertig !== 'boolean' || typeof o.weiter !== 'boolean') throw new Error('Flags');
+  if ((o.fertig && level === 0) || (o.weiter && !o.fertig)) throw new Error('Flags passen nicht');
+  const grenze = level > 0 ? levelDef(level).max : MAX_SCHAECHTE;
+  if (!Array.isArray(o.schaechte) || o.schaechte.length < 1 || o.schaechte.length > grenze) throw new Error('Schächte');
   if (!istObjekt(o.aufzug) || !istObjekt(o.zentrum)) throw new Error('Aufbau');
   const z = {
-    v: 1,
+    v: STAND_VERSION,
     t: zahl(o.t, 0, MAX_T),
     uhr: zahl(o.uhr, 0, 1e12),
     sperre: zahl(o.sperre, 0, 1e12),
     geld: zahl(o.geld, 0, MAX_GELD),
     gesamt: zahl(o.gesamt, 0, MAX_GELD),
-    aufzug: { tempo: zahl(o.aufzug.tempo, 1, MAX_STUFE, true), ladung: zahl(o.aufzug.ladung, 1, MAX_STUFE, true) },
-    zentrum: {
-      tempo: zahl(o.zentrum.tempo, 1, MAX_STUFE, true), ladung: zahl(o.zentrum.ladung, 1, MAX_STUFE, true),
-      lager: zahl(o.zentrum.lager, 0, MAX_GELD),
-    },
+    level,
+    fertig: o.fertig,
+    weiter: o.weiter,
+    aufzug: { stufe: zahl(o.aufzug.stufe, 1, MAX_STUFE, true) },
+    zentrum: { stufe: zahl(o.zentrum.stufe, 1, MAX_STUFE, true), lager: zahl(o.zentrum.lager, 0, MAX_GELD) },
     schaechte: o.schaechte.map((s) => {
       if (!istObjekt(s)) throw new Error('Schacht');
-      return {
-        n: zahl(s.n, 1, MAX_BERGLEUTE, true), tempo: zahl(s.tempo, 1, MAX_STUFE, true),
-        trag: zahl(s.trag, 1, MAX_STUFE, true), kiste: zahl(s.kiste, 0, MAX_GELD),
-      };
+      return { stufe: zahl(s.stufe, 1, MAX_STUFE, true), kiste: zahl(s.kiste, 0, MAX_GELD) };
     }),
   };
-  // Übernahme älterer Stände: Puffer an die Kapazität anpassen
+  // Puffer an die Kapazität anpassen
   z.schaechte.forEach((s, k) => { s.kiste = Math.min(s.kiste, lagerKap(s, k)); });
   z.zentrum.lager = Math.min(z.zentrum.lager, eingangKap(z));
   return z;
@@ -119,21 +119,23 @@ export function zumSpeichern(z, jetztMs = Date.now()) {
 const pot = (f, stufe) => f ** (stufe - 1);
 
 export function schachtWert(k) { return KURVE.wert0 * KURVE.wertFaktor ** k; }
-export function minerZeit(s) { return KURVE.miner0 / pot(KURVE.tempoF, s.tempo); }
-export function minerLast(s, k) { return schachtWert(k) * pot(KURVE.tragF, s.trag); }
-/** Förderung des Schachts in Taler pro Sekunde */
-export function foerderung(s, k) { return (s.n * minerLast(s, k)) / minerZeit(s); }
-export function aufzugLadung(z) { return KURVE.aufzugLadung0 * pot(KURVE.aufzugLadungF, z.aufzug.ladung); }
+/** Zahl der Bergleute im Schacht (nur Anzeige und Förderung) */
+export function bergleute(s) { return 1 + Math.floor((s.stufe - 1) / KURVE.bergleuteAlle); }
+export function minerZeit(s) { return KURVE.miner0 / pot(KURVE.tempoF, s.stufe); }
+export function minerLast(s, k) { return schachtWert(k) * pot(KURVE.tragF, s.stufe); }
+/** Förderung des Schachts in Erz pro Sekunde */
+export function foerderung(s, k) { return (bergleute(s) * minerLast(s, k)) / minerZeit(s); }
+export function aufzugLadung(z) { return KURVE.aufzugLadung0 * pot(KURVE.aufzugLadungF, z.aufzug.stufe); }
 /** Dauer einer Fahrt (hin und zurück, mit Be-/Entladen) zu Schacht k */
 export function fahrtZeit(z, k) {
-  return (2 * (k + 1) * KURVE.fahrtJeSchacht * 0.5 + KURVE.fahrt0) / pot(KURVE.aufzugTempoF, z.aufzug.tempo);
+  return ((k + 1) * 2 * KURVE.fahrtJeSchacht + KURVE.fahrt0) / pot(KURVE.aufzugTempoF, z.aufzug.stufe);
 }
-export function zentrumLadung(z) { return KURVE.zentrumLadung0 * pot(KURVE.zentrumLadungF, z.zentrum.ladung); }
-export function zentrumZeit(z) { return KURVE.zentrumZeit0 / pot(KURVE.zentrumTempoF, z.zentrum.tempo); }
-/** Verkaufsleistung des Zentrums in Taler pro Sekunde */
+export function zentrumLadung(z) { return KURVE.zentrumLadung0 * pot(KURVE.zentrumLadungF, z.zentrum.stufe); }
+export function zentrumZeit(z) { return KURVE.zentrumZeit0 / pot(KURVE.zentrumTempoF, z.zentrum.stufe); }
+/** Verkaufsleistung des Zentrums in Erz pro Sekunde */
 export function verkaufsRate(z) { return zentrumLadung(z) / zentrumZeit(z); }
 
-/** Ungefähres Einkommen im Dauerbetrieb (Taler/s): Förderung, durch Aufzug und Zentrum begrenzt */
+/** Durchsatz des Aufzugs im Dauerbetrieb und mittlere Fahrzeit */
 export function aufzugFluss(z) {
   let p = 0, f = 0, t = 0;
   const lad = aufzugLadung(z);
@@ -143,10 +145,10 @@ export function aufzugFluss(z) {
     f += (pk / lad) * fahrtZeit(z, k);
     t += pk * fahrtZeit(z, k);
   });
-  const fluss = f > 1 ? p / f : p;
-  return { fluss, fahrt: p > 0 ? t / p : 0 };
+  return { fluss: f > 1 ? p / f : p, fahrt: p > 0 ? t / p : 0 };
 }
 
+/** Ungefähres Einkommen im Dauerbetrieb (Taler/s): Förderung, durch Aufzug und Zentrum begrenzt */
 export function einkommen(z) {
   return Math.min(aufzugFluss(z).fluss, verkaufsRate(z));
 }
@@ -234,23 +236,15 @@ export function offline(z, jetztMs) {
 }
 
 // ---------- Käufe ----------
-const KATEGORIEN = ['n', 'tempo', 'trag'];
-
+// Schlüssel: 's<k>' (Schacht k verbessern), 'aufzug', 'zentrum', 'schacht' (neuer Schacht)
 function stufeVon(z, was) {
-  const teile = String(was).split(':');
-  if (teile[0] === 'schacht' && teile.length === 1) return { art: 'schacht', stufe: z.schaechte.length, max: MAX_SCHAECHTE };
-  if (teile[0] === 'aufzug' && (teile[1] === 'tempo' || teile[1] === 'ladung') && teile.length === 2) {
-    return { art: `aufzug${teile[1] === 'tempo' ? 'Tempo' : 'Ladung'}`, stufe: z.aufzug[teile[1]], max: MAX_STUFE };
-  }
-  if (teile[0] === 'zentrum' && (teile[1] === 'tempo' || teile[1] === 'ladung') && teile.length === 2) {
-    return { art: `zentrum${teile[1] === 'tempo' ? 'Tempo' : 'Ladung'}`, stufe: z.zentrum[teile[1]], max: MAX_STUFE };
-  }
-  const m = /^s(\d{1,2}):(n|tempo|trag)$/.exec(String(was));
-  if (m) {
+  if (was === 'schacht') return { art: 'schacht', stufe: z.schaechte.length, max: maxSchaechte(z) };
+  if (was === 'aufzug') return { art: 'aufzug', stufe: z.aufzug.stufe, max: MAX_STUFE };
+  if (was === 'zentrum') return { art: 'zentrum', stufe: z.zentrum.stufe, max: MAX_STUFE };
+  const m = /^s(\d{1,2})$/.exec(String(was));
+  if (m && Number(m[1]) < z.schaechte.length) {
     const k = Number(m[1]);
-    if (k < z.schaechte.length && KATEGORIEN.includes(m[2])) {
-      return { art: m[2], k, stufe: z.schaechte[k][m[2]], max: m[2] === 'n' ? MAX_BERGLEUTE : MAX_STUFE };
-    }
+    return { art: 'schachtStufe', k, stufe: z.schaechte[k].stufe, max: MAX_STUFE };
   }
   return null;
 }
@@ -260,18 +254,14 @@ export function preis(z, was) {
   const i = stufeVon(z, was);
   if (!i || i.stufe >= i.max) return null;
   const kk = KURVE.kosten[i.art];
-  if (i.art === 'schacht') return Math.round(kk.basis * kk.wachs ** (i.stufe - 1));
-  if (i.art === 'aufzugTempo' || i.art === 'aufzugLadung' || i.art === 'zentrumTempo' || i.art === 'zentrumLadung') {
-    return Math.round(kk.basis * kk.wachs ** (i.stufe - 1));
-  }
-  return Math.round(kk.basis * kk.wachs ** (i.stufe - 1) * KURVE.tiefe ** i.k);
+  const p = kk.basis * kk.wachs ** (i.stufe - 1);
+  return Math.round(i.art === 'schachtStufe' ? p * KURVE.tiefe ** i.k : p);
 }
 
 /** Alle jetzt möglichen Käufe (Schlüssel) */
 export function moeglicheKaeufe(z) {
-  const liste = [];
-  z.schaechte.forEach((_, k) => { for (const c of KATEGORIEN) liste.push(`s${k}:${c}`); });
-  liste.push('schacht', 'aufzug:tempo', 'aufzug:ladung', 'zentrum:tempo', 'zentrum:ladung');
+  const liste = z.schaechte.map((_, k) => `s${k}`);
+  liste.push('schacht', 'aufzug', 'zentrum');
   return liste.filter((w) => preis(z, w) !== null);
 }
 
@@ -283,12 +273,9 @@ export function kaufe(z, was) {
   const c = kopie(z);
   c.geld -= p;
   const i = stufeVon(c, was);
-  if (i.art === 'schacht') c.schaechte.push({ n: 1, tempo: 1, trag: 1, kiste: 0 });
-  else if (i.art === 'n' || i.art === 'tempo' || i.art === 'trag') c.schaechte[i.k][i.art] += 1;
-  else {
-    const [wo, was2] = String(was).split(':');
-    c[wo][was2] += 1;
-  }
+  if (i.art === 'schacht') c.schaechte.push({ stufe: 1, kiste: 0 });
+  else if (i.art === 'schachtStufe') c.schaechte[i.k].stufe += 1;
+  else c[i.art].stufe += 1;
   return { zustand: c, ok: true, preis: p, grund: '' };
 }
 
@@ -297,7 +284,7 @@ export function anschub(z, k) {
   if (!Number.isInteger(k) || k < 0 || k >= z.schaechte.length) return { zustand: z, ok: false };
   if (z.uhr < z.sperre) return { zustand: z, ok: false };
   const c = kopie(z);
-  c.schaechte[k].kiste = Math.min(MAX_GELD, c.schaechte[k].kiste + foerderung(c.schaechte[k], k) * ANSCHUB_S);
+  c.schaechte[k].kiste = Math.min(lagerKap(c.schaechte[k], k), c.schaechte[k].kiste + foerderung(c.schaechte[k], k) * ANSCHUB_S);
   c.sperre = c.uhr + ANSCHUB_SPERRE_S;
   return { zustand: c, ok: true };
 }
@@ -318,30 +305,140 @@ export function naechstesZiel(z) {
 
 export function bezeichnung(was) {
   if (was === 'schacht') return 'Neuer Schacht';
-  const teile = String(was).split(':');
-  const art = { n: 'Bergleute', tempo: 'Tempo', trag: 'Tragkraft', ladung: 'Ladung' }[teile[1]] ?? '';
-  if (teile[0] === 'aufzug') return `Aufzug: ${art}`;
-  if (teile[0] === 'zentrum') return `Zentrum: ${art}`;
-  const k = Number(String(teile[0]).slice(1));
-  return `Schacht ${k + 1}: ${art}`;
+  if (was === 'aufzug') return 'Aufzug';
+  if (was === 'zentrum') return 'Verkaufszentrum';
+  const m = /^s(\d{1,2})$/.exec(String(was));
+  return m ? `Schacht ${Number(m[1]) + 1}` : '';
 }
 
-/** Kurze Wirkung eines Kaufs, z. B. „+10 % Tempo“ */
+/** Kurze Wirkung eines Kaufs (für Tooltip und aria-label), z. B. „+20 % Förderung“ */
 export function effektText(z, was) {
   const proz = (f) => `+${Math.round((f - 1) * 100)} %`;
   if (was === 'schacht') {
-    const k = z.schaechte.length;
-    return `+${formatiere(foerderung({ n: 1, tempo: 1, trag: 1 }, k))} Erz/s`;
+    return `+${formatiere(foerderung({ stufe: 1 }, z.schaechte.length))} Erz/s`;
   }
-  const teile = String(was).split(':');
-  const art = teile[1];
-  if (teile[0] === 'aufzug') return art === 'tempo' ? `${proz(KURVE.aufzugTempoF)} Tempo` : `${proz(KURVE.aufzugLadungF)} Ladung`;
-  if (teile[0] === 'zentrum') return art === 'tempo' ? `${proz(KURVE.zentrumTempoF)} Verkaufstempo` : `${proz(KURVE.zentrumLadungF)} Ladung`;
-  const sh = z.schaechte[Number(teile[0].slice(1))];
+  if (was === 'aufzug') return `${proz(KURVE.aufzugTempoF)} Tempo, ${proz(KURVE.aufzugLadungF)} Ladung`;
+  if (was === 'zentrum') return `${proz(KURVE.zentrumTempoF)} Verkaufstempo, ${proz(KURVE.zentrumLadungF)} Ladung`;
+  const m = /^s(\d{1,2})$/.exec(String(was));
+  const sh = m ? z.schaechte[Number(m[1])] : null;
   if (!sh) return '';
-  if (art === 'n') return `+1 Bergmann (${proz((sh.n + 1) / sh.n)})`;
-  if (art === 'tempo') return `${proz(KURVE.tempoF)} Tempo`;
-  return `${proz(KURVE.tragF)} Tragkraft`;
+  const k = Number(m[1]);
+  const vor = foerderung(sh, k);
+  const nach = foerderung({ stufe: sh.stufe + 1 }, k);
+  return `${proz(nach / vor)} Förderung`;
+}
+
+// ---------- Level ----------
+// Ein Level ist ein frisches Bergwerk mit einem klaren Ziel (oder wenigen Zielen, die alle erfüllt sein müssen).
+// Alles (Ziele, Startgeld, Startschächte, Obergrenze der Schächte) ergibt sich aus der Levelnummer – nie aus dem Spielstand.
+const Z = (art, wert) => ({ art, wert });
+/** Handgesetzte Level: [Ziele, Startgeld, Startschächte, höchstens Schächte] */
+const LEVEL_TABELLE = [
+  [[Z('verdient', 500)], 0, 1, 1],
+  [[Z('aufzug', 3)], 0, 1, 1],
+  [[Z('schachtStufe', 18)], 0, 1, 1],
+  [[Z('schaechte', 2)], 0, 1, 2],
+  [[Z('zentrum', 4)], 0, 1, 1],
+  [[Z('verdient', 4000)], 0, 1, 1],
+  [[Z('aufzug', 5), Z('zentrum', 4)], 0, 1, 1],
+  [[Z('verdient', 8000)], 300, 2, 4],
+  [[Z('alleStufe', 6)], 300, 2, 4],
+  [[Z('aufzug', 6), Z('zentrum', 5)], 300, 2, 4],
+  [[Z('verdient', 6000)], 300, 2, 4],
+  [[Z('schachtStufe', 22)], 300, 2, 4],
+  [[Z('verdient', 7000), Z('aufzug', 5)], 500, 3, 5],
+  [[Z('alleStufe', 8)], 300, 2, 4],
+  [[Z('schachtStufe', 20), Z('zentrum', 5)], 500, 3, 5],
+  [[Z('schaechte', 3)], 2000, 2, 3],
+  [[Z('aufzug', 6)], 800, 3, 5],
+  [[Z('verdient', 6000)], 800, 3, 5],
+  [[Z('zentrum', 6)], 800, 3, 5],
+  [[Z('alleStufe', 6), Z('aufzug', 5)], 300, 2, 4],
+  [[Z('schachtStufe', 24)], 0, 1, 1],
+  [[Z('schaechte', 2), Z('aufzug', 4)], 0, 1, 2],
+  [[Z('verdient', 8000)], 100, 2, 3],
+  [[Z('zentrum', 6), Z('aufzug', 5)], 100, 2, 3],
+  [[Z('verdient', 10000), Z('alleStufe', 6)], 300, 2, 4],
+];
+const HANDGESETZT = LEVEL_TABELLE.length;
+export const LEVEL_HANDGESETZT = HANDGESETZT;
+const GEN_MAX_FAKTOR = 1.2;        // generierte Level werden höchstens so viel schwerer als die handgesetzten
+
+/** Definition von Level n (n ≥ 1): { ziele, geld, schaechte, max } – deterministisch, ohne Zufall */
+export function levelDef(n) {
+  const i = Math.min(Math.max(1, Math.floor(Number(n)) || 1), MAX_LEVEL) - 1;
+  const basis = LEVEL_TABELLE[i % HANDGESETZT];
+  let faktor = 1;
+  if (i >= HANDGESETZT) faktor = Math.min(GEN_MAX_FAKTOR, 1 + 0.04 * Math.floor(i / HANDGESETZT) + 0.01 * (i % HANDGESETZT));
+  const ziele = basis[0].map(({ art, wert }) => {
+    if (faktor === 1) return { art, wert };
+    // Zahlen-Ziele wachsen mit dem Faktor, Stufen- und Schachtziele um höchstens eins
+    if (art === 'verdient' || art === 'einkommen') return { art, wert: Math.round(wert * faktor) };
+    if (art === 'schaechte') return { art, wert };
+    return { art, wert: wert + (faktor >= 1.15 ? 1 : 0) };
+  });
+  const schaechte = basis[2];
+  const max = Math.min(MAX_SCHAECHTE, Math.max(basis[3], ziele.reduce((m, zi) => (zi.art === 'schaechte' ? Math.max(m, zi.wert) : m), 1)));
+  return { ziele, geld: basis[1], schaechte, max };
+}
+
+/** Obergrenze der Schächte in diesem Bergwerk (Level: je nach Level, Endlos: 10) */
+export function maxSchaechte(z) {
+  return z.level > 0 ? levelDef(z.level).max : MAX_SCHAECHTE;
+}
+
+function zielIst(z, art) {
+  switch (art) {
+    case 'verdient': return z.gesamt;
+    case 'schaechte': return z.schaechte.length;
+    case 'aufzug': return z.aufzug.stufe;
+    case 'zentrum': return z.zentrum.stufe;
+    case 'schachtStufe': return Math.max(...z.schaechte.map((s) => s.stufe));
+    case 'alleStufe': return Math.min(...z.schaechte.map((s) => s.stufe));
+    case 'einkommen': return einkommen(z);
+    default: return 0;
+  }
+}
+function zielStart(def, art) {
+  if (art === 'schaechte') return def.schaechte;
+  if (art === 'verdient') return 0;
+  if (art === 'einkommen') {
+    const z0 = { aufzug: { stufe: 1 }, zentrum: { stufe: 1, lager: 0 }, schaechte: Array.from({ length: def.schaechte }, () => ({ stufe: 1, kiste: 0 })) };
+    return einkommen(z0);
+  }
+  return 1;
+}
+
+/** Fortschritt zum Ziel: { anteil 0..1, erreicht } – nur im Level-Modus */
+export function zielStand(z) {
+  if (!(z.level > 0)) return null;
+  const def = levelDef(z.level);
+  let summe = 0;
+  let erreicht = true;
+  for (const zi of def.ziele) {
+    const ist = zielIst(z, zi.art);
+    const start = zielStart(def, zi.art);
+    if (!(ist >= zi.wert - 1e-9)) erreicht = false;
+    const a = zi.wert > start ? (ist - start) / (zi.wert - start) : 1;
+    summe += Math.min(1, Math.max(0, a));
+  }
+  return { anteil: erreicht ? 1 : Math.min(0.999, summe / def.ziele.length), erreicht };
+}
+
+/** Ziel als Text, z. B. „3 Schächte öffnen“ */
+export function zielText(def) {
+  return def.ziele.map(({ art, wert }) => {
+    switch (art) {
+      case 'verdient': return `${formatiere(wert)} Taler verdienen`;
+      case 'schaechte': return `${wert} Schächte öffnen`;
+      case 'aufzug': return `Aufzug auf Stufe ${wert}`;
+      case 'zentrum': return `Zentrum auf Stufe ${wert}`;
+      case 'schachtStufe': return `Ein Schacht auf Stufe ${wert}`;
+      case 'alleStufe': return `Alle Schächte auf Stufe ${wert}`;
+      case 'einkommen': return `${formatiere(wert)} Taler pro Sekunde`;
+      default: return '';
+    }
+  }).join(' und ');
 }
 
 // ---------- Darstellung der Zahlen ----------

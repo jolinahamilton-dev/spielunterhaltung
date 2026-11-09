@@ -177,7 +177,8 @@ export async function zeigeSpiel(wurzel, eintrag, app) {
     planeSpeichern();
   }
 
-  function meldeGewonnen(text = '') {
+  /** optionen.weiterspielen: Das Spiel kann nach dem Ziel ohne Ziel weiterlaufen (instanz.weiterspielen()) */
+  function meldeGewonnen(text = '', optionen = {}) {
     if (zustand.geloest) return;
     if (!zustand.begonnen) meldeAenderung();
     zustand.geloest = true;
@@ -189,6 +190,8 @@ export async function zeigeSpiel(wurzel, eintrag, app) {
         text ? h('p', { class: 'gewonnen-text', text }) : null,
         h('div', { class: 'gewonnen-knoepfe' },
           h('button', { type: 'button', class: 'knopf primaer', on: { click: () => starteNeu(zustand.variante) } }, 'Neues Spiel'),
+          optionen?.weiterspielen && typeof instanz?.weiterspielen === 'function'
+            ? h('button', { type: 'button', class: 'knopf', on: { click: weiterspielen } }, 'Weiterspielen ohne Ziel') : null,
           h('a', { class: 'knopf', href: '#/' }, 'Zur Übersicht'),
         ),
       ),
@@ -196,6 +199,18 @@ export async function zeigeSpiel(wurzel, eintrag, app) {
     gewonnen.hidden = false;
     gewonnen.querySelector('button')?.focus();
     aktualisiereKnoepfe();
+  }
+
+  /** Nach dem Ziel im Endlos-Betrieb weiterspielen: dasselbe Spiel, Overlay weg, Knöpfe wieder frei */
+  function weiterspielen() {
+    if (!zustand.geloest || typeof instanz?.weiterspielen !== 'function') return;
+    try { instanz.weiterspielen(); } catch (f) { console.error(f); return; }
+    zustand.geloest = false;
+    gewonnen.hidden = true;
+    gewonnen.replaceChildren();
+    aktualisiereKnoepfe();
+    speichereJetzt();
+    flaeche.querySelector('button, [tabindex]')?.focus?.({ preventScroll: true });
   }
 
   // ---------- Aktionen ----------

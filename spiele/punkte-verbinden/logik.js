@@ -89,7 +89,7 @@ export function neuesSpiel({ variante = 'endlos', seed, level = 1 }) {
   return {
     version: 1, variante: v, seed: String(seed), rng: rng.zustand(),
     b: s.b, hh: s.hh, farben: s.farben.slice(), brett,
-    level: lv, ziele, rest: ziele ? ziele.slice() : null,
+    level: lv, ziele, rest: ziele ? ziele.slice() : null, weiter: false,
     gesammelt: 0, zuege: 0, verlauf: [],
   };
 }
@@ -183,7 +183,10 @@ const schnappschuss = (z) => ({
 });
 const mitVerlauf = (z, neu) => ({ ...neu, verlauf: [...z.verlauf, schnappschuss(z)].slice(-VERLAUF_MAX) });
 
-export const gewonnen = (z) => Boolean(z.rest) && z.rest.every((r) => r === 0);
+export const gewonnen = (z) => Boolean(z.rest) && !z.weiter && z.rest.every((r) => r === 0);
+
+/** Nach dem Ziel ohne Ziele weiterspielen (Flag im Spielstand; das Ziel wird nie erneut gemeldet) */
+export const weiterspielen = (z) => (z.rest ? { ...z, weiter: true } : z);
 
 /** Wie viele Punkte welcher Farbe wurden entfernt → Restzahlen senken */
 function senkeRest(z, farbe, anzahl) {
@@ -240,7 +243,7 @@ export function hinweis(z) {
   const gesamt = new Map();
   for (const f of brett) gesamt.set(f, (gesamt.get(f) || 0) + 1);
   const offen = (f) => {
-    if (!z.rest) return true;
+    if (!z.rest || z.weiter) return true;
     const k = z.farben.indexOf(f);
     return k >= 0 && z.rest[k] > 0;
   };
@@ -312,6 +315,8 @@ export function ausSpeicher(roh) {
       if (!Array.isArray(roh.ziele) || !gleichListe(roh.ziele, ziele)) return null;
       rest = roh.rest.slice();
     } else if (roh.ziele !== null) return null;
+    const weiter = roh.weiter === undefined ? false : roh.weiter;   // alte Stände ohne Flag: false
+    if (typeof weiter !== 'boolean' || (weiter && ziele === null)) return null;
     if (!istGanz(roh.gesammelt, 0, 1e9) || !istGanz(roh.zuege, 0, 1e9)) return null;
     if (!Array.isArray(roh.verlauf) || roh.verlauf.length > VERLAUF_MAX) return null;
     const verlauf = [];
@@ -327,7 +332,7 @@ export function ausSpeicher(roh) {
     return {
       version: 1, variante: roh.variante, seed: roh.seed, rng: roh.rng.slice(),
       b: s.b, hh: s.hh, farben: s.farben.slice(), brett: roh.brett.slice(),
-      level, ziele: ziele ? ziele.slice() : null, rest,
+      level, ziele: ziele ? ziele.slice() : null, rest, weiter,
       gesammelt: roh.gesammelt, zuege: roh.zuege, verlauf,
     };
   } catch {

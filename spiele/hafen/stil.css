@@ -1,4 +1,4 @@
-/* Hafen mit Ebenen. Alles untereinander (ab 360 px); feste Geldleiste oben. */
+/* Hafen, minimalistisch: Geldleiste, Verkaufszeile, Kran-Streifen links, schlanke Dock-Zeilen. */
 .ha {
   --ha-oben: 0px;
   display: grid;
@@ -18,155 +18,157 @@
   position: sticky; top: var(--ha-oben); z-index: 4;
   display: grid; gap: var(--a1);
   padding: var(--a2) var(--a3);
-  border: 1px solid var(--rand); border-radius: var(--radius);
-  background: var(--flaeche); box-shadow: var(--schatten);
+  border-bottom: 1px solid var(--rand);
+  background: var(--hg);
 }
 .ha-leiste-oben { display: flex; align-items: baseline; justify-content: space-between; gap: var(--a3); }
+.ha-ziel { display: grid; gap: 3px; }
+.ha-ziel-text { font-size: .78rem; color: var(--text-leise); overflow-wrap: anywhere; }
 .ha-geld { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.ha-einheit { font-size: .9rem; font-weight: 500; color: var(--text-leise); }
+.ha-einheit { font-size: .85rem; font-weight: 500; color: var(--text-leise); }
 .ha-rate { font-size: .95rem; font-weight: 600; color: var(--akzent); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.ha-leiste-ziel { display: flex; align-items: center; gap: var(--a2); min-width: 0; }
-.ha-ziel-titel { font-size: .75rem; font-weight: 600; letter-spacing: .02em; color: var(--text-leise); }
-.ha-ziel-text { flex: 1; min-width: 0; font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ha-ziel-knopf { min-height: 32px; padding-block: 0; }
-.ha-ziel-knopf[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
-.ha-ziel-knopf.bereit { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); }
 
 .ha-weg {
   display: flex; align-items: center; justify-content: space-between; gap: var(--a3);
   padding: var(--a2) var(--a3); border-radius: var(--radius);
-  background: var(--flaeche-2); border: 1px solid var(--rand);
+  background: var(--flaeche-2);
 }
 .ha-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; }
 
-/* Karten */
-.ha-karte {
-  display: grid; gap: var(--a2);
-  padding: var(--a3);
-  border: 1px solid var(--rand); border-radius: var(--radius);
-  background: var(--flaeche); box-shadow: var(--schatten);
-}
-.ha-ebene { border-left: 5px solid var(--ha-farbe, var(--akzent)); }
-.ha-ebenen { display: grid; gap: var(--a3); }
-.ha-titel { margin: 0; font-size: 1rem; font-weight: 650; display: flex; align-items: center; gap: var(--a1); }
-.ha-zeile-info { font-size: .82rem; color: var(--text-leise); font-variant-numeric: tabular-nums; }
-.ha-symbol { width: 14px; height: 14px; fill: var(--ha-farbe); stroke: var(--text); stroke-width: .5; }
-.ha-symbol-halter { display: inline-flex; }
+.ha-name { font-size: .8rem; font-weight: 600; }
+.ha-klein { font-size: .72rem; color: var(--text-leise); font-variant-numeric: tabular-nums; }
+.ha-zahl { font-size: .72rem; color: var(--text-leise); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ha-symbol { width: 11px; height: 11px; fill: var(--ha-farbe); stroke: var(--text); stroke-width: .5; }
+.ha-symbol-halter { display: inline-flex; margin-right: 3px; }
 
-.ha-ebene-kopf { display: flex; align-items: center; gap: var(--a3); }
-.ha-ebene-titel { display: grid; gap: 2px; flex: 1; min-width: 0; }
-.ha-ertrag { font-weight: 700; color: var(--akzent); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.ha-badge {
-  display: inline-flex; align-items: center; justify-content: center; flex: none;
-  width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--text); box-sizing: border-box;
-}
-.ha-icon { width: 24px; height: 24px; fill: var(--text); }
-
-/* Mengen: Name · Balken · Zahl (feste Breiten, damit nichts springt) */
-.ha-messer-liste { display: grid; gap: var(--a1); }
-.ha-messer { display: grid; grid-template-columns: 5.6rem minmax(0, 1fr) 7.6rem; align-items: center; gap: var(--a2); font-size: .82rem; }
-.ha-messer-name { color: var(--text-leise); }
-.ha-zahl { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.ha-balken {
-  position: relative; display: block; height: 10px; overflow: hidden;
-  border: 2px solid var(--text); border-radius: var(--radius-klein); background: var(--flaeche-2); box-sizing: content-box;
-}
-.ha-fuell { display: block; height: 100%; width: 0; background: var(--ha-farbe, var(--akzent)); transition: width 200ms linear; }
-.ha-messer.voll .ha-fuell { background: var(--fehler); }
+/* Dünner Füllbalken */
+.ha-balken { display: block; height: 4px; border-radius: 2px; background: var(--rand); overflow: hidden; }
+.ha-fuell { display: block; height: 100%; width: 0; background: var(--akzent); border-radius: 2px; transition: width 200ms linear; }
+.ha-balken.voll .ha-fuell { background: var(--fehler) !important; }
 .ha-still .ha-fuell { transition: none; }
 
-/* Szene */
-.ha-szene {
-  position: relative; height: 110px; overflow: hidden;
+/* Ein Upgrade-Knopf je Station: ▲ Preis, Stufe als winziges Abzeichen */
+.ha-up {
+  position: relative; flex: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: 3px;
+  min-width: 58px; min-height: 40px; padding: 0 var(--a2);
+  font: inherit; font-size: .85rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text);
   border: 1px solid var(--rand); border-radius: var(--radius-klein);
-  background: linear-gradient(to bottom, var(--akzent-sanft) 0 62%, var(--flaeche-2) 62% 100%);
+  background: var(--flaeche-2); cursor: pointer;
 }
-.ha-welle {
-  position: absolute; left: -50%; width: 200%; height: 22px;
-  background-image: radial-gradient(circle at 12px 0, transparent 10px, var(--akzent) 11px 13px, transparent 14px);
-  background-size: 24px 22px; opacity: .55;
-  animation: ha-wogen 9s linear infinite;
+.ha-up-pfeil { font-size: .6rem; }
+.ha-abzeichen {
+  position: absolute; top: -7px; right: -5px;
+  min-width: 17px; height: 17px; padding: 0 4px; box-sizing: border-box;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: .62rem; font-weight: 700; line-height: 1;
+  border-radius: 9px; background: var(--text); color: var(--hg);
 }
-.ha-welle-1 { bottom: 26px; }
-.ha-welle-2 { bottom: 6px; animation-duration: 13s; animation-direction: reverse; opacity: .35; }
-@keyframes ha-wogen { to { transform: translateX(24px); } }
-.ha-turm { position: absolute; left: 14px; bottom: 4px; height: 98px; width: auto; }
-.ha-turm-leib { fill: var(--flaeche); stroke: var(--text); stroke-width: 1.2; stroke-linejoin: round; }
-.ha-turm-streifen { fill: var(--fehler); stroke: var(--text); stroke-width: .8; }
-.ha-turm-lampe { fill: var(--erfolg); stroke: var(--text); stroke-width: 1; }
+.ha-up[aria-disabled="true"] { opacity: .6; cursor: not-allowed; }
+.ha-up.bereit { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); }
+.ha-up.ziel { outline: 2px dashed var(--akzent); outline-offset: 2px; }
+.ha-up.blitz { outline: 3px solid var(--erfolg); outline-offset: 1px; }
+.ha-up:focus-visible, .ha-schiff:focus-visible, .ha .knopf:focus-visible { outline: 3px solid var(--fokus); outline-offset: 2px; }
+
+/* Verkauf mit Leuchtturm */
+.ha-verkauf { display: flex; align-items: center; gap: var(--a3); padding: var(--a1) var(--a2); border-bottom: 1px solid var(--rand); }
+.ha-turm-halter { position: relative; flex: none; width: 34px; height: 46px; }
+.ha-turm { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ha-turm-leib { fill: var(--flaeche); stroke: var(--text); stroke-width: 1.6; stroke-linejoin: round; }
+.ha-turm-streifen { fill: var(--fehler); stroke: var(--text); stroke-width: 1; }
+.ha-turm-lampe { fill: var(--erfolg); stroke: var(--text); stroke-width: 1.2; }
 .ha-turm-dach { fill: var(--text); }
-.ha-turm-sockel { fill: var(--text-leise); }
 .ha-strahl {
-  position: absolute; left: 40px; top: 12px; height: 30px; width: calc(60% * var(--reichweite, .5));
+  position: absolute; left: 70%; top: 14%; height: 30%; width: calc(90px * var(--reichweite, .5));
   background: linear-gradient(to right, var(--erfolg), transparent);
   clip-path: polygon(0 40%, 100% 0, 100% 100%, 0 60%);
   animation: ha-leuchten 5s ease-in-out infinite;
 }
-@keyframes ha-leuchten { 0%, 100% { opacity: .18; } 50% { opacity: .6; } }
-.ha-turm-info { position: absolute; right: var(--a3); top: var(--a2); font-size: .8rem; font-weight: 600; color: var(--text-leise); }
+@keyframes ha-leuchten { 0%, 100% { opacity: .15; } 50% { opacity: .55; } }
+.ha-verkauf-mitte { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.ha-verkauf-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: var(--a2); }
+.ha-lagerzeile { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--a2); }
 
-/* Dock mit Schiff */
+/* Hafen: Kran-Streifen links, Docks rechts */
+.ha-hafen { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: var(--a2); }
+.ha-kran-streifen {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding-top: var(--a1);
+  border-right: 1px solid var(--rand);
+}
+.ha-kran-info { margin-bottom: var(--a1); }
+.ha-schiene {
+  position: relative; flex: 1; width: 6px; min-height: 40px; margin-top: var(--a1);
+  border-radius: 3px; background: repeating-linear-gradient(to bottom, var(--rand) 0 6px, transparent 6px 10px);
+}
+.ha-wagen {
+  position: absolute; left: -5px; width: 16px; height: 10px; border-radius: 2px;
+  background: var(--text-leise); border: 2px solid var(--text); box-sizing: border-box;
+  animation: ha-fahrt var(--lauf, 8s) ease-in-out infinite alternate;
+}
+@keyframes ha-fahrt { from { top: 0; } to { top: calc(100% - 10px); } }
+.ha-still .ha-wagen { animation: none; top: 0; }
+
+.ha-docks { display: grid; }
+.ha-dock {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) 3.5rem auto; align-items: center; gap: var(--a2);
+  padding: var(--a2) var(--a1) var(--a2) 0;
+  border-bottom: 1px solid var(--rand);
+}
+.ha-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--text); box-sizing: border-box;
+}
+.ha-icon { width: 16px; height: 16px; fill: var(--text); }
+.ha-lager { display: grid; gap: 3px; justify-items: end; }
+.ha-lager .ha-balken { width: 100%; }
+
+/* Schiff am Kai */
 .ha-see {
-  position: relative; height: 56px; overflow: hidden;
-  border-radius: var(--radius-klein); border: 1px solid var(--rand);
-  background: linear-gradient(to bottom, var(--akzent-sanft), var(--flaeche-2));
+  position: relative; height: 48px; overflow: hidden;
+  border-radius: var(--radius-klein);
+  background: linear-gradient(to bottom, var(--akzent-sanft), transparent);
+  border-bottom: 2px solid var(--akzent);
 }
-.ha-kai {
-  position: absolute; left: 0; top: 0; bottom: 0; width: 12px;
-  background: repeating-linear-gradient(to bottom, var(--text-leise) 0 6px, var(--rand) 6px 12px);
-}
-.ha-kran { position: absolute; left: 12px; top: 6px; width: 30px; height: 4px; background: var(--text); border-radius: 2px; }
+.ha-see-name { position: absolute; left: 4px; top: 1px; line-height: 1.2; z-index: 1; color: var(--text-leise); }
 .ha-schiff {
-  --sw: 72px; --x: 1;
-  position: absolute; bottom: 8px; width: var(--sw); height: 38px; padding: 0;
-  left: calc(12px + (100% - 12px - var(--sw)) * var(--x));
+  --sw: 44px; --x: 1;
+  position: absolute; bottom: 3px; width: var(--sw); height: 26px; padding: 0;
+  left: calc((100% - var(--sw)) * var(--x));
   background: none; border: none; cursor: pointer; font: inherit;
   transition: left 200ms linear;
 }
 .ha-rumpf {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 24px;
-  background: var(--flaeche); border: 2px solid var(--text); border-radius: 3px 3px 18px 18px / 3px 3px 14px 14px;
+  position: absolute; left: 0; right: 0; bottom: 0; height: 16px;
+  background: var(--flaeche); border: 2px solid var(--text); border-radius: 2px 2px 12px 12px / 2px 2px 9px 9px;
   overflow: hidden; box-sizing: border-box;
 }
-.ha-ladung { position: absolute; left: 0; right: 0; bottom: 0; height: 100%; opacity: .8; transition: height 200ms linear; }
-.ha-mast { position: absolute; left: 34px; bottom: 24px; width: 3px; height: 14px; background: var(--text); }
-.ha-phase { margin-top: calc(-1 * var(--a1)); }
-.ha-schiff:focus-visible, .ha .knopf:focus-visible, .ha-kauf:focus-visible { outline: 3px solid var(--fokus); outline-offset: 2px; }
+.ha-ladung { position: absolute; left: 0; right: 0; bottom: 0; height: 100%; opacity: .85; transition: height 200ms linear; }
+.ha-mast { position: absolute; left: 20px; bottom: 16px; width: 2px; height: 9px; background: var(--text); }
 .ha-still .ha-schiff, .ha-still .ha-ladung { transition: none; }
-.ha-still .ha-welle, .ha-still .ha-strahl { animation: none; }
-.ha-still .ha-strahl { opacity: .35; }
+.ha-still .ha-strahl { animation: none; opacity: .35; }
 
-/* Kaufknöpfe an der Station: Name, Wirkung, Stufe + Preis */
-.ha-knoepfe { display: grid; gap: var(--a2); }
-.ha-knoepfe.zwei { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.ha-kauf {
-  display: grid; gap: 2px; align-content: center; justify-items: stretch;
-  min-height: var(--treffer); padding: var(--a2);
-  font: inherit; color: var(--text); text-align: left;
-  border: 1px solid var(--rand); border-radius: var(--radius-klein);
-  background: var(--flaeche-2); cursor: pointer;
+/* Neues Dock */
+.ha-neu-zeile {
+  display: flex; align-items: center; gap: var(--a2);
+  padding: var(--a2) var(--a2);
+  border: 1px dashed var(--rand); border-radius: var(--radius);
+  color: var(--text-leise);
 }
-.ha-kauf-name { font-size: .82rem; font-weight: 650; }
-.ha-kauf-wirkung { font-size: .74rem; color: var(--text-leise); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.ha-kauf-zeile { display: flex; justify-content: space-between; align-items: baseline; gap: var(--a1); }
-.ha-kauf-stufe { font-size: .72rem; color: var(--text-leise); }
-.ha-kauf-preis { margin-left: auto; font-size: .95rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.ha-kauf[aria-disabled="true"] { opacity: .6; cursor: not-allowed; }
-.ha-kauf.bereit { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); }
-.ha-kauf.bereit .ha-kauf-wirkung, .ha-kauf.bereit .ha-kauf-stufe { color: inherit; opacity: .9; }
-.ha-kauf.blitz { outline: 3px solid var(--erfolg); outline-offset: 1px; }
-.ha-neue-ebene { width: 100%; border-style: dashed; padding: var(--a3); }
-.ha-neue-ebene .ha-kauf-name { font-size: .95rem; }
-.ha-fuss { display: flex; justify-content: center; padding-top: var(--a3); }
+.ha-neu-plus { font-size: 1.2rem; font-weight: 700; }
+.ha-neu-text { flex: 1; min-width: 0; font-size: .85rem; font-weight: 600; color: var(--text); }
+.ha-fuss { display: flex; justify-content: center; padding-top: var(--a2); }
 
 @media (prefers-reduced-motion: reduce) {
-  .ha-welle, .ha-strahl { animation: none; }
+  .ha-strahl, .ha-wagen { animation: none; }
   .ha-schiff, .ha-ladung, .ha-fuell { transition: none; }
 }
 @media (max-width: 400px) {
-  .ha-karte { padding: var(--a2); }
-  .ha-schiff { --sw: 60px; }
-  .ha-mast { left: 28px; }
-  .ha-messer { grid-template-columns: 4.8rem minmax(0, 1fr) 6.6rem; gap: var(--a1); }
-  .ha-geld { font-size: 1.35rem; }
+  .ha-hafen { grid-template-columns: 46px minmax(0, 1fr); gap: var(--a1); }
+  .ha-dock { grid-template-columns: 24px minmax(0, 1fr) 3.2rem auto; gap: var(--a1); }
+  .ha-badge { width: 24px; height: 24px; }
+  .ha-icon { width: 14px; height: 14px; }
+  .ha-schiff { --sw: 38px; }
+  .ha-mast { left: 17px; }
+  .ha-up { min-width: 52px; padding: 0 var(--a1); }
 }

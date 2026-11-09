@@ -43,3 +43,6 @@ Nachfüllen ist zufällig; die Ziele sind moderat. Das Feld ist nie dauerhaft bl
 
 ## Tests (`tests/spiele/punkte-verbinden.test.js`)
 Pfadgültigkeit (Nachbarschaft, Farbe, Kanten, Zurücknehmen), Schleifen, Schwerkraft/Nachfüllen deterministisch, Ziele/Gewinn, Festgefahren-Erkennung, Umordnen (Paar garantiert, deterministisch, Farbanzahl bleibt), Rückgängig, Hinweis, Validierung (strikt) inkl. Rundlauf, kein Audio/Vibration im Quelltext, Robustheit von `erstelle` mit manipulierten Ständen.
+
+## Weiterspielen nach dem Ziel
+Nach einem Gewinn meldet das Spiel `ctx.meldeGewonnen(text, { weiterspielen: true })`. Der Knopf „Weiterspielen ohne Ziel“ ruft `instanz.weiterspielen()` auf: Im Spielstand wird `weiter: true` gesetzt (Feld bleibt, Ziele werden ausgeblendet, Anzeige „Ohne Ziel · Level n“ + Zähler „Gesammelt“). Das Ziel wird nie ein zweites Mal gemeldet (`gewonnen(z)` ist bei `weiter` immer false). Das Flag überlebt Neuladen; alte Stände ohne Flag gelten als `false`; `weiter: true` ist nur bei Zielstufen gültig, sonst wird der Stand verworfen (streng, Typ boolean). Der Level-Zähler wurde schon beim Gewinn erhöht. Gesammelte Punkte zählen **nicht** für den Endlos-Rekord (er gehört der Variante `endlos`; hier wurde ein Feld mit Zielen gespielt, das wäre nicht vergleichbar), und es gibt keinen Rekord-Zähler im Weiterspielen.

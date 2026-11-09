@@ -163,7 +163,7 @@ export default {
     }
 
     function zeichneKopf() {
-      if (z.rest) {
+      if (z.rest && !z.weiter) {
         levelEl.textContent = `Level ${zahl(z.level)}`;
         levelEl.hidden = false;
         zieleEl.replaceChildren(...z.farben.map((f, k) => {
@@ -176,11 +176,12 @@ export default {
           }, punkt, h('span', { class: 'pv-ziel-zahl', text: rest === 0 ? '✓' : String(rest) }));
         }));
       } else {
-        levelEl.hidden = true;
-        const rekord = Math.max(rekordLesen(), z.gesammelt);
+        levelEl.textContent = z.weiter ? `Ohne Ziel · Level ${zahl(z.level)}` : '';
+        levelEl.hidden = !z.weiter;
+        const rekord = Math.max(rekordLesen(), z.weiter ? 0 : z.gesammelt);
         zieleEl.replaceChildren(
           h('div', { class: 'pv-zaehler', role: 'listitem' }, h('span', { class: 'pv-label', text: 'Gesammelt' }), h('span', { class: 'pv-wert', text: zahl(z.gesammelt) })),
-          h('div', { class: 'pv-zaehler', role: 'listitem' }, h('span', { class: 'pv-label', text: 'Rekord' }), h('span', { class: 'pv-wert', text: zahl(rekord) })),
+          ...(z.weiter ? [] : [h('div', { class: 'pv-zaehler', role: 'listitem' }, h('span', { class: 'pv-label', text: 'Rekord' }), h('span', { class: 'pv-wert', text: zahl(rekord) }))]),
         );
       }
     }
@@ -250,7 +251,7 @@ export default {
       hinweisPfad = null;
       merkeLevel(z.variante, z.level + 1);
       zeichne();
-      ctx.meldeGewonnen(`Level ${zahl(z.level)} geschafft – ${STUFEN_NAME[z.variante]}, ${zahl(z.zuege)} Züge. Weiter mit Level ${zahl(z.level + 1)}.`);
+      ctx.meldeGewonnen(`Level ${zahl(z.level)} geschafft – ${STUFEN_NAME[z.variante]}, ${zahl(z.zuege)} Züge. Weiter mit Level ${zahl(z.level + 1)}.`, { weiterspielen: true });
     }
 
     function mische() {
@@ -388,9 +389,19 @@ export default {
     // ---------- Schnittstelle ----------
     const instanz = {
       getStand: () => L.zumSpeichern(z),
-      zusammenfassung: () => (z.rest
+      zusammenfassung: () => (z.rest && z.weiter ? `${STUFEN_NAME[z.variante]} · ohne Ziel · ${zahl(z.gesammelt)} gesammelt` : z.rest
         ? `${STUFEN_NAME[z.variante]} · Level ${zahl(z.level)} · noch ${zahl(z.rest.reduce((a, r) => a + r, 0))} Punkte`
         : `Endlos · ${zahl(z.gesammelt)} gesammelt`),
+      weiterspielen() {
+        if (!z.rest) return;
+        z = L.weiterspielen(z);
+        gemeldet = false;
+        steckt = false;
+        pfad = [];
+        hinweisPfad = null;
+        zeichne();
+        ctx.meldeAenderung();
+      },
       kannRueckgaengig: () => !gemeldet && L.kannRueckgaengig(z),
       rueckgaengig() {
         if (gemeldet) return;

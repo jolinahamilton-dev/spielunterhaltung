@@ -1,6 +1,6 @@
 // Wird von werkzeuge/precache-liste.ps1 geschrieben – Version hier oder per -Version erhöhen.
 // Jede Veröffentlichung braucht eine neue Version, sonst holt sich der Service Worker kein Update.
-self.SPIEL_VERSION = '1.5.1';
+self.SPIEL_VERSION = '1.6.0';
 self.SPIEL_DATEIEN = [
   './',
   './css/basis.css',
@@ -26,6 +26,7 @@ self.SPIEL_DATEIEN = [
   './kern/startseite.js',
   './kern/statistik.js',
   './kern/symbole.js',
+  './kern/uebersicht.js',
   './kern/update.js',
   './kern/worker-dienst.js',
   './kern/worker-helfer.js',
@@ -35,6 +36,9 @@ self.SPIEL_DATEIEN = [
   './spiele/bild-abtragen/logik.js',
   './spiele/bild-abtragen/motive.json',
   './spiele/bild-abtragen/stil.css',
+  './spiele/blasenschuss/index.js',
+  './spiele/blasenschuss/logik.js',
+  './spiele/blasenschuss/stil.css',
   './spiele/block-puzzle/formen.js',
   './spiele/block-puzzle/index.js',
   './spiele/block-puzzle/logik.js',
@@ -103,5 +107,8 @@ self.SPIEL_DATEIEN = [
   './spiele/wortsuche/logik.js',
   './spiele/wortsuche/stil.css',
   './spiele/wortsuche/woerter.json',
+  './spiele/ziegelbruch/index.js',
+  './spiele/ziegelbruch/logik.js',
+  './spiele/ziegelbruch/stil.css',
   './version.js',
 ];

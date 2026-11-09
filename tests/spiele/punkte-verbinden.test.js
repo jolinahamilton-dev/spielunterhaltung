@@ -2,7 +2,7 @@ import { test, gleich, tief, wahr } from '../mini-test.js';
 import {
   STUFEN, VARIANTEN, VERLAUF_MAX, zieleFuer, nachbarn, sindNachbarn, hatPaar, festgefahren, neuesSpiel,
   pfadSchritt, schliesst, pfadGueltig, betroffen, faelltNach, zug, umordnen, rueckgaengig, kannRueckgaengig,
-  gewonnen, hinweis, ausSpeicher, istGueltig, zumSpeichern,
+  gewonnen, weiterspielen, hinweis, ausSpeicher, istGueltig, zumSpeichern,
 } from '../../spiele/punkte-verbinden/logik.js';
 import { erstelleZufall, neuerSeed } from '../../kern/zufall.js';
 
@@ -333,7 +333,7 @@ function kontext(signal, variante = 'endlos', protokoll = {}) {
     worker: () => { throw new Error('kein Worker nötig'); },
     meldung(t) { (protokoll.meldungen ||= []).push(t); },
     meldeAenderung() { protokoll.aenderungen = (protokoll.aenderungen || 0) + 1; },
-    meldeGewonnen(t) { protokoll.gewonnen = t; },
+    meldeGewonnen(t, o) { protokoll.gewonnen = t; protokoll.gewonnenOptionen = o; },
     neuesSpiel() {},
   };
 }
@@ -489,4 +489,59 @@ test('Punkte: Oberfläche – Zeiger-Ziehen setzt Kette, Loslassen räumt, Zurü
     gleich(instanz.getStand().zuege, 1);
   });
   gleich(r.fehler.join('|'), '');
+});
+
+test('Punkte: Weiterspielen – Flag, Validierung, kein zweites Gewonnen', async () => {
+  let z = neuesSpiel({ variante: 'leicht', seed: 'weiter', level: 1 });
+  gleich(z.weiter, false);
+  z = { ...z, rest: [0, 0, 0, 0] };
+  gleich(gewonnen(z), true);
+  const w = weiterspielen(z);
+  gleich(w.weiter, true);
+  gleich(gewonnen(w), false, 'nach Weiterspielen nie wieder gewonnen');
+  const s = JSON.parse(JSON.stringify(zumSpeichern(w)));
+  tief(ausSpeicher(s), w, 'Flag überlebt Speichern/Laden');
+  // alter Stand ohne Flag → false
+  const alt = JSON.parse(JSON.stringify(zumSpeichern(neuesSpiel({ variante: 'mittel', seed: 'alt' }))));
+  delete alt.weiter;
+  gleich(ausSpeicher(alt).weiter, false);
+  for (const falsch of [1, 'true', null, [], {}]) gleich(ausSpeicher({ ...alt, weiter: falsch }), null, JSON.stringify(falsch));
+  const e = JSON.parse(JSON.stringify(zumSpeichern(neuesSpiel({ variante: 'endlos', seed: 'e' }))));
+  gleich(ausSpeicher({ ...e, weiter: true }), null, 'endlos kennt kein Weiterspielen');
+  gleich(weiterspielen(neuesSpiel({ variante: 'endlos', seed: 'e' })).weiter, false);
+
+  // Oberfläche: Gewinn einmal melden, weiterspielen, danach nie wieder melden, Neuladen bleibt endlos
+  const start = JSON.parse(JSON.stringify(zumSpeichern({ ...neuesSpiel({ variante: 'leicht', seed: 'ui', level: 1 }), rest: [2, 0, 0, 0] })));
+  start.brett[0] = 0; start.brett[1] = 0; start.brett[2] = 0; start.brett[3] = 0;
+  const t = (key) => ({ key, ctrlKey: false, metaKey: false, altKey: false, target: document.body });
+  let stand = null;
+  const r = await starte(start, 'leicht', (instanz, container, prot) => {
+    let gemeldet = 0; let optionen = null;
+    const ursprung = prot.gewonnen;
+    for (let i = 0; i < 6; i++) { instanz.onTaste(t('ArrowLeft')); instanz.onTaste(t('ArrowUp')); }
+    instanz.onTaste(t(' ')); instanz.onTaste(t('ArrowRight')); instanz.onTaste(t(' ')); instanz.onTaste(t('Enter'));
+    wahr(prot.gewonnen && prot.gewonnen !== ursprung, 'Gewinn gemeldet');
+    wahr(prot.gewonnenOptionen?.weiterspielen === true, 'Option weiterspielen übergeben');
+    prot.gewonnen = null; gemeldet = 0; optionen = null;
+    wahr(typeof instanz.weiterspielen === 'function');
+    instanz.weiterspielen();
+    gleich(instanz.getStand().weiter, true);
+    wahr(!container.querySelector('.pv-ziel'), 'Ziele ausgeblendet');
+    wahr(/Ohne Ziel/.test(container.querySelector('.pv-level').textContent));
+    // weiter ziehen: Felder 0..3 liegen nach dem Nachfüllen anders – Hinweis nutzen
+    for (let i = 0; i < 5; i++) {
+      instanz.hinweis();
+      instanz.onTaste(t('Enter'));
+    }
+    gleich(prot.gewonnen, null, 'kein zweites meldeGewonnen');
+    stand = instanz.getStand();
+  });
+  gleich(r.fehler.join('|'), '');
+  wahr(stand.zuege > 1 && stand.weiter === true);
+  const r2 = await starte(stand, 'leicht', (instanz, container, prot) => {
+    gleich(instanz.getStand().weiter, true, 'nach Neuladen weiter im Endlos-Betrieb');
+    wahr(!container.querySelector('.pv-ziel'));
+    gleich(prot.gewonnen, undefined, 'beim Laden nicht erneut gemeldet');
+  });
+  gleich(r2.fehler.join('|'), '');
 });

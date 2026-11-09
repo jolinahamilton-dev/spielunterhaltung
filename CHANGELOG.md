@@ -1,10 +1,11 @@
 # Änderungen
 
-## 1.5.1 – 09.11.2026
-- Übersicht: Die Bildlaufposition wird gemerkt – nach einem Spiel steht die Übersicht wieder an derselben Stelle
-- Schachtbetrieb überarbeitet: Geld, Einkommen und nächstes Ziel stehen in einer festen Leiste oben; Mengen je Station mit Füllbalken (Schachtlager, Aufzug, Eingangslager im Verkaufszentrum); die Kiste ist das Schachtlager auf der Aufzugsseite; Upgrades sitzen direkt an der jeweiligen Station
-- Hafen überarbeitet: jede Ebene ist eine eigene Ressource (8 Ebenen, die nächste wird freigekauft); Upgrades an der Ebene; Mengen auf Schiff, im Dock-Lager und im Verkauf mit Balken; feste Geldleiste. Achtung: ein alter Hafen-Spielstand wird verworfen, es beginnt ein neuer Hafen
-
+## 1.6.0 – 09.11.2026
+- Neu: **Ziegelbruch** (Bälle schießen, Blöcke Stück für Stück abbauen; Level mit Ziel oder endlos mit nachrückenden Reihen)
+- Neu: **Blasenschuss** (gleichfarbige Blasen abschießen, lose Blasen fallen ab; Level mit Ziel oder endlos)
+- **Schachtbetrieb** und **Hafen**: minimalistisch neu gestaltet (feste Geldleiste, Aufzug/Kran, ein Upgrade-Knopf je Station, Mengen mit Balken) und mit zwei Spielarten: **Level – mit Ziel** und **Endlos – ohne Ziel**. Alte Spielstände dieser beiden Spiele werden verworfen
+- **Weiterspielen ohne Ziel**: Nach einem erreichten Level-Ziel (Punkte verbinden, Schachtbetrieb, Hafen, Ziegelbruch, Blasenschuss) kann dasselbe Spiel endlos weiterlaufen
+- Übersicht: Reihenfolge der Spiele wählbar (Standard, Zuletzt benutzt, Eigene mit „Anordnen“); die Bildlaufposition der Übersicht wird gemerkt
 
 ## 1.5.0 – 08.11.2026
 - Neu: **Punkte verbinden** (gleichfarbige Punkte zu Ketten ziehen, Schleifen räumen eine ganze Farbe; endlos oder mit Zielen)

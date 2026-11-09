@@ -1,0 +1,88 @@
+/* Ziegelbruch. Feldbreite hängt am Fenster (7 × 10 Zellen). */
+.zb {
+  --breite: clamp(240px, min(calc(100vw - 32px), calc((100dvh - 330px) * 0.7)), 460px);
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--a3);
+  width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.zb-info { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: var(--a2) var(--a4); width: var(--breite); }
+.zb-wert { font-size: 1.3rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.zb-chip { color: var(--text-leise); font-size: .9rem; font-variant-numeric: tabular-nums; }
+
+.zb-rahmen {
+  position: relative;
+  width: var(--breite);
+  aspect-ratio: 7 / 10;
+  background: var(--flaeche-2);
+  border: 2px solid var(--rand);
+  border-radius: var(--radius);
+  overflow: hidden;
+  touch-action: none;
+  cursor: crosshair;
+  box-sizing: content-box;
+}
+.zb-rahmen:focus-visible { outline: 3px solid var(--fokus); outline-offset: 2px; }
+.zb-feld {
+  position: absolute; inset: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(10, 1fr);
+}
+.zb-zelle { position: relative; margin: 2px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+.zb-block { box-shadow: inset 0 -3px 0 rgb(0 0 0 / .14); color: var(--text); }
+.zb-zahl { font-weight: 700; font-size: clamp(.85rem, calc(var(--breite) * .05), 1.4rem); font-variant-numeric: tabular-nums; }
+.zb-t0 { background: color-mix(in srgb, var(--akzent) 22%, var(--flaeche)); }
+.zb-t1 { background: color-mix(in srgb, var(--akzent) 38%, var(--flaeche)); }
+.zb-t2 { background: color-mix(in srgb, var(--akzent) 54%, var(--flaeche)); }
+.zb-t3 { background: color-mix(in srgb, var(--akzent) 70%, var(--flaeche)); }
+.zb-t4 { background: var(--akzent); color: var(--akzent-text); }
+.zb-t5 { background: color-mix(in srgb, var(--akzent) 70%, var(--text)); color: var(--akzent-text); }
+.zb-t6 { background: color-mix(in srgb, var(--akzent) 45%, var(--text)); color: var(--hg); }
+.zb-t7 { background: var(--text); color: var(--hg); }
+.zb-symbol { position: absolute; right: 3px; top: 3px; width: 28%; height: 28%; fill: currentColor; opacity: .7; pointer-events: none; }
+.zb-wand {
+  background: repeating-linear-gradient(135deg, var(--text-leise) 0 4px, var(--rand) 4px 8px);
+  box-shadow: inset 0 0 0 2px var(--text-leise);
+}
+.zb-extra, .zb-bombe, .zb-raeumer { background: transparent; border: 2px solid var(--akzent); }
+.zb-extra { border-radius: 50%; color: var(--akzent); }
+.zb-bombe { border-style: dashed; border-color: var(--fehler); color: var(--fehler); }
+.zb-raeumer { border-color: var(--text); color: var(--text); border-style: double; border-width: 4px; }
+.zb-zeichen { font-weight: 700; font-size: clamp(.9rem, calc(var(--breite) * .055), 1.5rem); }
+
+.zb-fallzone {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 10%;
+  border-top: 2px dashed var(--rand);
+  background: color-mix(in srgb, var(--fehler-sanft) 40%, transparent);
+  display: flex; align-items: flex-start; justify-content: flex-end;
+  pointer-events: none;
+}
+.zb-fallzone span { font-size: .7rem; color: var(--text-leise); padding: 1px 6px; }
+
+.zb-ziel, .zb-baelle { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.zb-ziellinie { fill: none; stroke: var(--text); stroke-width: .045; stroke-dasharray: .14 .12; stroke-linecap: round; opacity: .75; }
+.zb-zielpunkt { fill: none; stroke: var(--text); stroke-width: .04; opacity: .85; }
+.zb-ball, .zb-werfer {
+  position: absolute;
+  width: calc(100% * 0.32 / 7);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--flaeche);
+}
+.zb-ball[hidden] { display: none; }
+.zb-werfer { background: var(--akzent); }
+
+.zb-aktionen { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--a3); width: var(--breite); min-width: 280px; }
+.zb-knopf { min-height: var(--treffer); min-width: 120px; }
+.zb-knopf.an { background: var(--akzent-sanft); border-color: var(--akzent); }
+.zb-winkel { font-size: .9rem; font-variant-numeric: tabular-nums; }
+.zb-status { margin: 0; min-height: 1.3em; text-align: center; font-size: .95rem; }
+
+@media (prefers-reduced-motion: reduce) { .zb * { transition: none !important; animation: none !important; } }
